@@ -17,11 +17,6 @@ MetadataManager::MetadataManager(const QString& file)
     load();
 }
 
-QList<VersionInfo> MetadataManager::versions(const QString &filePath)
-{
-    return data_[filePath];
-}
-
 bool MetadataManager::hasVersion(const QString &filePath, const QString &hash)
 {
     const auto& list = data_[filePath];
@@ -64,6 +59,21 @@ bool MetadataManager::save()
 
     file.write(QJsonDocument(root).toJson());
     return true;
+}
+
+VersionInfo MetadataManager::find(const QString &filePath, const QString &versionId) const
+{
+    for (const auto& v : data_.value(filePath))
+    {
+        if (v.versionId == versionId)
+            return v;
+    }
+    return {};
+}
+
+QList<VersionInfo> MetadataManager::versions(const QString &filePath) const
+{
+    return data_.value(filePath);
 }
 
 void MetadataManager::load()

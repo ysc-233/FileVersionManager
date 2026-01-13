@@ -11,11 +11,12 @@ class MetadataManager {
 public:
     explicit MetadataManager(const QString& file);
 
-    QList<VersionInfo> versions(const QString& filePath);
     bool hasVersion(const QString& filePath, const QString& hash);
-
     void addVersion(const VersionInfo& info);
     bool save();
+
+    VersionInfo find(const QString& filePath,const QString& versionId) const;
+    QList<VersionInfo> versions(const QString& filePath) const;
 
 private:
     QString metadataFile_;
