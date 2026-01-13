@@ -1,10 +1,10 @@
 #ifndef FILEWATCHER_H
 #define FILEWATCHER_H
 
-
 #pragma once
 #include <QObject>
-#include <QString>
+#include <QFileSystemWatcher>
+#include <QStringList>
 
 class FileWatcher : public QObject {
     Q_OBJECT
@@ -15,5 +15,12 @@ public:
 
 signals:
     void fileChanged(const QString& path);
+
+private slots:
+    void onFileChanged(const QString& path);
+    void onDirectoryChanged(const QString& path);
+
+private:
+    QFileSystemWatcher watcher_;
 };
 #endif // FILEWATCHER_H

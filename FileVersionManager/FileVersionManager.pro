@@ -14,7 +14,8 @@ SOURCES += \
     main.cpp \
     storage/filestorage.cpp \
     storage/storage.cpp \
-    ui/mainwindow.cpp
+    ui/mainwindow.cpp \
+    utils/logger.cpp
 
 HEADERS += \
     core/filewatcher.h \
@@ -22,7 +23,7 @@ HEADERS += \
     storage/filestorage.h \
     storage/storage.h \
     ui/mainwindow.h \
-    utils/Logger.h
+    utils/logger.h
 
 FORMS += \
     ui/mainwindow.ui
