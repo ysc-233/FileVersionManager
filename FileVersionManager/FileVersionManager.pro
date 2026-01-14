@@ -18,6 +18,7 @@ SOURCES += \
     storage/filestorage.cpp \
     storage/storage.cpp \
     ui/mainwindow.cpp \
+    ui/versiontreemodel.cpp \
     utils/logger.cpp
 
 HEADERS += \
@@ -29,6 +30,7 @@ HEADERS += \
     storage/filestorage.h \
     storage/storage.h \
     ui/mainwindow.h \
+    ui/versiontreemodel.h \
     utils/logger.h
 
 FORMS += \

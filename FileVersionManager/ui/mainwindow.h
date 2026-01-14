@@ -2,12 +2,13 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "core/FileWatcher.h"
+#include <QTreeView>
+#include "core/filewatcher.h"
 #include "core/versionmanager.h"
 
 class FileWatcher;
 class VersionManager;
-
+class VersionTreeModel;
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -22,7 +23,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    FileWatcher* watcher_;
-    VersionManager* versionManager_;
+    FileWatcher* m_watcher;
+    VersionManager* m_versionManager;
+    VersionTreeModel* m_versionModel;
+    QTreeView* m_versionView;
 };
 #endif // MAINWINDOW_H

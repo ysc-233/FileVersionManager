@@ -1,5 +1,5 @@
-#ifndef FILEWATCHER_H
-#define FILEWATCHER_H
+#ifndef FILEm_watcherH
+#define FILEm_watcherH
 
 #pragma once
 #include <QObject>
@@ -21,6 +21,6 @@ private slots:
     void onDirectoryChanged(const QString& path);
 
 private:
-    QFileSystemWatcher watcher_;
+    QFileSystemWatcher m_watcher;
 };
-#endif // FILEWATCHER_H
+#endif // FILEm_watcherH

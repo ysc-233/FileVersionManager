@@ -4,8 +4,8 @@
 
 FileWatcher::FileWatcher(QObject* parent)
 {
-    connect(&watcher_, &QFileSystemWatcher::fileChanged,this, &FileWatcher::onFileChanged);
-    connect(&watcher_, &QFileSystemWatcher::directoryChanged,this, &FileWatcher::onDirectoryChanged);
+    connect(&m_watcher, &QFileSystemWatcher::fileChanged,this, &FileWatcher::onFileChanged);
+    connect(&m_watcher, &QFileSystemWatcher::directoryChanged,this, &FileWatcher::onDirectoryChanged);
 }
 
 void FileWatcher::addWatchPath(const QString &path)
@@ -16,11 +16,11 @@ void FileWatcher::addWatchPath(const QString &path)
         return;
     }
     // 监听目录本身
-    watcher_.addPath(path);
+    m_watcher.addPath(path);
     // 监听目录下已有文件（重要）
     const auto files = dir.entryList(QDir::Files);
     for (const auto& file : files) {
-        watcher_.addPath(dir.absoluteFilePath(file));
+        m_watcher.addPath(dir.absoluteFilePath(file));
     }
     qDebug() << "Watching directory:" << path;
 }
@@ -38,8 +38,8 @@ void FileWatcher::onDirectoryChanged(const QString &path)
     // 新文件加入监听
     for (const auto& file : files) {
         const QString abs = dir.absoluteFilePath(file);
-        if (!watcher_.files().contains(abs)) {
-            watcher_.addPath(abs);
+        if (!m_watcher.files().contains(abs)) {
+            m_watcher.addPath(abs);
             emit fileChanged(abs);
         }
     }

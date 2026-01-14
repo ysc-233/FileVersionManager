@@ -6,97 +6,129 @@
 #include <QDir>
 #include <QDebug>
 
-MetadataManager::MetadataManager(const QString& file)
-    : metadataFile_(file)
+MetadataManager::MetadataManager(const QString& rootPath)
+    : m_rootPath(rootPath)
 {
-    // 确保 .fvm 目录存在
-    QFileInfo info(metadataFile_);
-    QDir dir;
-    dir.mkpath(info.path());
+    m_metadataFile = metadataFilePath();
+    ensureMetadata();
 
-    load();
+    const QJsonDocument doc = load();
+    const QJsonObject root = doc.object();
+    const QJsonObject filesObj = root["files"].toObject();
+
+    for (auto it = filesObj.begin(); it != filesObj.end(); ++it) {
+        const QString filePath = it.key();
+        const QJsonArray arr = it.value().toArray();
+
+        QList<VersionInfo> list;
+        for (const auto& v : arr) {
+            QJsonObject obj = v.toObject();
+
+            VersionInfo info;
+            info.filePath = filePath;
+            info.versionId = obj["versionId"].toString();
+            info.timestamp = QDateTime::fromString(
+                obj["timestamp"].toString(),
+                "yyyy-MM-dd HH:mm:ss");
+
+            list.append(info);
+        }
+        m_data.insert(filePath, list);
+    }
 }
 
-bool MetadataManager::hasVersion(const QString &filePath, const QString &hash)
+QString MetadataManager::metadataFilePath() const
 {
-    const auto& list = data_[filePath];
-    for (const auto& v : list)
-    {
-        if (v.versionId == hash)
+    return m_rootPath + "/.fvm/metadata.json";
+}
+
+void MetadataManager::ensureMetadata()
+{
+    QDir dir(m_rootPath + "/.fvm/objects");
+    if (!dir.exists())
+        dir.mkpath(".");
+
+    QFile file(m_metadataFile);
+    if (file.exists())
+        return;
+
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QJsonObject root;
+        root["files"] = QJsonObject();
+        file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+        file.close();
+    }
+}
+
+QJsonDocument MetadataManager::load() const
+{
+    QFile file(m_metadataFile);
+    if (!file.open(QIODevice::ReadOnly))
+        return QJsonDocument(QJsonObject());
+
+    return QJsonDocument::fromJson(file.readAll());
+}
+
+bool MetadataManager::hasVersion(const QString& filePath,
+                                 const QString& versionId) const
+{
+    const auto it = m_data.find(filePath);
+    if (it == m_data.end())
+        return false;
+
+    for (const auto& v : it.value()) {
+        if (v.versionId == versionId)
             return true;
     }
     return false;
 }
 
-void MetadataManager::addVersion(const VersionInfo &info)
+void MetadataManager::addVersion(const VersionInfo& info)
 {
-    data_[info.filePath].push_back(info);
+    m_data[info.filePath].append(info);
 }
 
 bool MetadataManager::save()
 {
     QJsonObject root;
+    QJsonObject filesObj;
 
-    for (auto it = data_.begin(); it != data_.end(); ++it)
-    {
+    for (auto it = m_data.begin(); it != m_data.end(); ++it) {
         QJsonArray arr;
-        for (const auto& v : it.value())
-        {
+        for (const auto& v : it.value()) {
             QJsonObject obj;
             obj["versionId"] = v.versionId;
-            obj["timestamp"] = v.timestamp.toString(Qt::ISODate);
+            obj["timestamp"] =
+                v.timestamp.toString("yyyy-MM-dd HH:mm:ss");
             arr.append(obj);
         }
-        root[it.key()] = arr;
+        filesObj[it.key()] = arr;
     }
 
-    QFile file(metadataFile_);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
-    {
-        qWarning() << "Failed to open metadata file:" << metadataFile_;
+    root["files"] = filesObj;
+
+    QFile file(m_metadataFile);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
-    }
 
-    file.write(QJsonDocument(root).toJson());
+    file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+    file.close();
     return true;
 }
 
-VersionInfo MetadataManager::find(const QString &filePath, const QString &versionId) const
+VersionInfo MetadataManager::find(const QString& filePath,
+                                  const QString& versionId) const
 {
-    for (const auto& v : data_.value(filePath))
-    {
+    const auto list = m_data.value(filePath);
+    for (const auto& v : list) {
         if (v.versionId == versionId)
             return v;
     }
-    return {};
+    return VersionInfo{};
 }
 
-QList<VersionInfo> MetadataManager::versions(const QString &filePath) const
+QList<VersionInfo> MetadataManager::versions(
+    const QString& filePath) const
 {
-    return data_.value(filePath);
-}
-
-void MetadataManager::load()
-{
-    QFile file(metadataFile_);
-    if (!file.open(QIODevice::ReadOnly))
-        return;
-
-    const auto doc = QJsonDocument::fromJson(file.readAll());
-    const auto root = doc.object();
-
-    for (auto it = root.begin(); it != root.end(); ++it)
-    {
-        QList<VersionInfo> list;
-        for (const auto& v : it.value().toArray())
-        {
-            QJsonObject obj = v.toObject();
-            VersionInfo info;
-            info.filePath = it.key();
-            info.versionId = obj["versionId"].toString();
-            info.timestamp = QDateTime::fromString(obj["timestamp"].toString(), Qt::ISODate);
-            list.push_back(info);
-        }
-        data_[it.key()] = list;
-    }
+    return m_data.value(filePath);
 }

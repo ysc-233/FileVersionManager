@@ -1,0 +1,28 @@
+{
+    "files": {
+        "D:/Projects/FileVersionManager/tests/test - 副本.txt": [
+            {
+                "timestamp": "2026-01-15 02:01:03",
+                "versionId": "97f4d3c75aba29cd15ad77c8d04ed3c6259a03b978c5d6f8b1016fb4e4e2a0fd"
+            },
+            {
+                "timestamp": "2026-01-15 02:08:08",
+                "versionId": "a80b46f74675705fd581af2e4662f3a4034edd84f76fdd7902fd2873169189a2"
+            }
+        ],
+        "D:/Projects/FileVersionManager/tests/test.txt": [
+            {
+                "timestamp": "2026-01-15 02:01:15",
+                "versionId": "1ad7d90b21b6526977d45263b8dc548838746d5ade84a89a731e21b170746fed"
+            },
+            {
+                "timestamp": "2026-01-15 02:01:20",
+                "versionId": "d0bfb00fbf027aa078bd04a5bed4e1530ff9cc99c6d28b1b503af31a5637363a"
+            },
+            {
+                "timestamp": "2026-01-15 02:01:23",
+                "versionId": "f95ac30f356350bb483c517fac342e659b55389338e84f4849fb4100eb44cfb3"
+            }
+        ]
+    }
+}
