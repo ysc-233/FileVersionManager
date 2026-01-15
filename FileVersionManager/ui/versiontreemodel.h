@@ -25,22 +25,19 @@ class VersionTreeModel : public QAbstractItemModel {
 public:
     explicit VersionTreeModel(QObject* parent = nullptr);
 
-    void setVersionsData(const QVector<FileNode>& files);
     void setAllVersions(const QMap<QString, QList<VersionInfo>>& data);
+    void setCurrentVersions(const QMap<QString, QString>& current);
 
-    QModelIndex index(int row, int column,
-                      const QModelIndex& parent) const override;
+    VersionInfo versionAt(const QModelIndex& index) const;
+
+    QModelIndex index(int row, int column,const QModelIndex& parent) const override;
     QModelIndex parent(const QModelIndex& index) const override;
     int rowCount(const QModelIndex& parent) const override;
     int columnCount(const QModelIndex&) const override;
     QVariant data(const QModelIndex& index, int role) const override;
 
-    bool isFileNode(const QModelIndex& index) const;
-    VersionInfo versionAt(const QModelIndex& index) const;
-    VersionInfo versionInfo(const QModelIndex& index) const;
-
 private:
     QVector<FileNode> m_files;
-    QString m_expandedFile;
+    QMap<QString, QString> m_currentVersions; // filePath → versionId
 };
 #endif // VERSIONTREEMODEL_H

@@ -56,15 +56,59 @@ void VersionManager::onFileChanged(const QString& filePath)
 
 bool VersionManager::rollback(const QString& filePath,const QString& versionId)
 {
-    const QByteArray content = m_storage.load(versionId);
-    if (content.isEmpty())
+    // 1. 查元数据，确保版本存在
+    const VersionInfo info = m_metadata.find(filePath, versionId);
+    if (info.versionId.isEmpty())
         return false;
 
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    // 2. 读取版本内容
+    const QByteArray data = m_storage.load(versionId);
+    if (data.isEmpty())
         return false;
 
-    file.write(content);
-    file.close();
+    QFileInfo fi(filePath);
+    QDir dir = fi.dir();
+
+    // 3. 临时文件（同目录，保证 rename 原子性）
+    const QString tmpPath = filePath + ".fvm_tmp";
+
+    {
+        QFile tmp(tmpPath);
+        if (!tmp.open(QIODevice::WriteOnly))
+            return false;
+
+        if (tmp.write(data) != data.size())
+            return false;
+
+        tmp.flush();
+        tmp.close();
+    }
+
+    // 4. 原子替换
+    QFile::remove(filePath);            // Windows 需要先删
+    if (!QFile::rename(tmpPath, filePath))
+    {
+        QFile::remove(tmpPath);
+        return false;
+    }
+
     return true;
+}
+
+QMap<QString, QString> VersionManager::currentVersions() const
+{
+    QMap<QString, QString> result;
+
+    const auto versions = m_metadata.allVersions();  // 接住临时对象
+
+    for (auto it = versions.cbegin(); it != versions.cend(); ++it)
+    {
+        const QString& filePath = it.key();
+
+        QString hash = FileHasher::sha256(filePath);
+        if (!hash.isEmpty())
+            result.insert(filePath, hash);
+    }
+
+    return result;
 }

@@ -18,6 +18,8 @@ public:
 
     bool rollback(const QString& filePath, const QString& versionId);
 
+    QMap<QString, QString> currentVersions() const;
+
 public slots:
     void onFileChanged(const QString& filePath);
 

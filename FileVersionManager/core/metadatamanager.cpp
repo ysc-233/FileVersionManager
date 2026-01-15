@@ -69,8 +69,7 @@ QJsonDocument MetadataManager::load() const
     return QJsonDocument::fromJson(file.readAll());
 }
 
-bool MetadataManager::hasVersion(const QString& filePath,
-                                 const QString& versionId) const
+bool MetadataManager::hasVersion(const QString& filePath,const QString& versionId) const
 {
     const auto it = m_data.find(filePath);
     if (it == m_data.end())
@@ -116,8 +115,7 @@ bool MetadataManager::save()
     return true;
 }
 
-VersionInfo MetadataManager::find(const QString& filePath,
-                                  const QString& versionId) const
+VersionInfo MetadataManager::find(const QString& filePath,const QString& versionId) const
 {
     const auto list = m_data.value(filePath);
     for (const auto& v : list) {
@@ -127,8 +125,7 @@ VersionInfo MetadataManager::find(const QString& filePath,
     return VersionInfo{};
 }
 
-QList<VersionInfo> MetadataManager::versions(
-    const QString& filePath) const
+QList<VersionInfo> MetadataManager::versions(const QString& filePath) const
 {
     return m_data.value(filePath);
 }

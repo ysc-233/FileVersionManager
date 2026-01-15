@@ -22,22 +22,25 @@ MainWindow::MainWindow(QWidget *parent)
     m_versionModel = new VersionTreeModel(this);
     m_versionView = new QTreeView(this);
     m_versionView->setModel(m_versionModel);
+    m_versionView->setHeaderHidden(true);
+    m_versionView->setRootIsDecorated(true);
+    m_versionView->setItemsExpandable(true);
 
     auto* layout = new QVBoxLayout(ui->gpb_version);
     layout->addWidget(m_versionView);
     ui->gpb_version->setLayout(layout);
 
     // 启动时加载所有历史版本
-    m_versionModel->setAllVersions(
-        m_versionManager->allVersions()
-    );
-
+    m_versionModel->setAllVersions(m_versionManager->allVersions());
+    m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
     // 文件变化 → 版本生成 → UI 刷新
     connect(m_watcher, &FileWatcher::fileChanged,this, [=](const QString& path)
     {
         m_versionManager->onFileChanged(path);
         m_versionModel->setAllVersions(m_versionManager->allVersions());
         m_versionView->expandAll();
+
+        m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
     });
 
     // 回滚
@@ -51,8 +54,11 @@ MainWindow::MainWindow(QWidget *parent)
 
         if (!m_versionManager->rollback(info.filePath, info.versionId))
         {
-            QMessageBox::warning(
-                this, "Rollback", "Rollback failed");
+            QMessageBox::warning(this, "Rollback", "Rollback failed");
+        }
+        else
+        {
+            m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
         }
     });
 

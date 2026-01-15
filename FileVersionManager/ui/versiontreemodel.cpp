@@ -1,20 +1,13 @@
 #include "versiontreemodel.h"
 #include <QFileInfo>
-
+#include <QFont>
+#include <QBrush>
 VersionTreeModel::VersionTreeModel(QObject* parent)
     : QAbstractItemModel(parent)
 {
 }
 
-void VersionTreeModel::setVersionsData(const QVector<FileNode>& files)
-{
-    beginResetModel();
-    m_files = files;
-    endResetModel();
-}
-
-void VersionTreeModel::setAllVersions(
-    const QMap<QString, QList<VersionInfo>>& data)
+void VersionTreeModel::setAllVersions(const QMap<QString, QList<VersionInfo>>& data)
 {
     beginResetModel();
     m_files.clear();
@@ -35,110 +28,189 @@ void VersionTreeModel::setAllVersions(
     endResetModel();
 }
 
-QModelIndex VersionTreeModel::index(
-    int row, int column,
-    const QModelIndex& parent) const
+QModelIndex VersionTreeModel::index(int row, int column,
+                                    const QModelIndex& parent) const
 {
-    if (!hasIndex(row, column, parent))
+    if (column != 0 || row < 0)
         return QModelIndex();
 
-    if (!parent.isValid()) {
-        // 文件节点，internalId = -1
-        return createIndex(row, column, -1);
+    // 根节点 → 文件
+    if (!parent.isValid())
+    {
+        if (row >= m_files.size())
+            return QModelIndex();
+
+        return createIndex(
+            row, column,
+            const_cast<FileNode*>(&m_files[row])
+        );
     }
 
-    // 版本节点，internalId = 文件行号
-    return createIndex(row, column, parent.row());
+    // 文件 → 版本
+    FileNode* file =
+        static_cast<FileNode*>(parent.internalPointer());
+
+    if (!file || row >= file->m_versions.size())
+        return QModelIndex();
+
+    return createIndex(
+        row, column,
+        const_cast<VersionNode*>(&file->m_versions[row])
+    );
 }
 
-QModelIndex VersionTreeModel::parent(
-    const QModelIndex& index) const
+QModelIndex VersionTreeModel::parent(const QModelIndex& index) const
 {
     if (!index.isValid())
         return QModelIndex();
 
-    const qint64 id = index.internalId();
-    if (id == -1)
-        return QModelIndex(); // 文件节点没有父
+    void* ptr = index.internalPointer();
 
-    // 版本节点 → 文件节点
-    return createIndex(static_cast<int>(id), 0, -1);
+    // ---------- 如果是 FileNode，parent 是无效 ----------
+    for (int i = 0; i < m_files.size(); ++i)
+    {
+        if (ptr == &m_files[i])
+            return QModelIndex();
+    }
+
+    // ---------- 否则一定是 VersionNode，找所属 FileNode ----------
+    for (int i = 0; i < m_files.size(); ++i)
+    {
+        auto& file = m_files[i];
+        for (auto& v : file.m_versions)
+        {
+            if (ptr == &v)
+            {
+                return createIndex(
+                    i, 0,
+                    const_cast<FileNode*>(&m_files[i])
+                );
+            }
+        }
+    }
+
+    return QModelIndex();
 }
 
-int VersionTreeModel::rowCount(
-    const QModelIndex& parent) const
+
+
+int VersionTreeModel::rowCount(const QModelIndex& parent) const
 {
+    // 根 → 文件数量
     if (!parent.isValid())
         return m_files.size();
 
-    // 文件节点 → 版本数量
-    if (parent.internalId() == -1) {
-        const int row = parent.row();
-        if (row < 0 || row >= m_files.size())
-            return 0;
-        return m_files[row].m_versions.size();
-    }
+    // 版本节点 → 不能再展开
+    if (parent.parent().isValid())
+        return 0;
 
-    return 0;
+    // 文件节点 → 版本数量
+    FileNode* file =
+        static_cast<FileNode*>(parent.internalPointer());
+
+    if (!file)
+        return 0;
+
+    return file->m_versions.size();
 }
 
-int VersionTreeModel::columnCount(
-    const QModelIndex&) const
+
+int VersionTreeModel::columnCount(const QModelIndex&) const
 {
     return 1;
 }
 
-QVariant VersionTreeModel::data(
-    const QModelIndex& index, int role) const
+QVariant VersionTreeModel::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid() || role != Qt::DisplayRole)
-        return QVariant();
+    if (!index.isValid())
+        return {};
 
-    // 文件节点
-    if (index.internalId() == -1) {
-        return QFileInfo(
-            m_files[index.row()].m_filePath).fileName();
+    // ---------- 文件节点 ----------
+    if (!index.parent().isValid())
+    {
+        if (role == Qt::DisplayRole)
+        {
+            const FileNode* file =
+                static_cast<const FileNode*>(index.internalPointer());
+            return QFileInfo(file->m_filePath).fileName();
+        }
+        return {};
     }
 
-    // 版本节点
-    const int fileRow = static_cast<int>(index.internalId());
-    const int versionRow = index.row();
+    // ---------- 版本节点 ----------
+    const VersionNode* v =
+        static_cast<const VersionNode*>(index.internalPointer());
+    const FileNode* f =
+        static_cast<const FileNode*>(index.parent().internalPointer());
 
-    const VersionNode& v =
-        m_files[fileRow].m_versions[versionRow];
+    if (!v || !f)
+        return {};
 
-    return QString("%1  %2")
-        .arg(v.m_versionId.left(8))
-        .arg(v.m_time.toString("yyyy-MM-dd HH:mm:ss"));
+    if (role == Qt::DisplayRole)
+    {
+        return QString("%1  %2")
+            .arg(v->m_versionId.left(8))
+            .arg(v->m_time.toString("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    const QString current =
+        m_currentVersions.value(f->m_filePath);
+
+    if (!current.isEmpty() && current == v->m_versionId)
+    {
+        if (role == Qt::FontRole)
+        {
+            QFont font;
+            font.setBold(true);
+            return font;
+        }
+        if (role == Qt::ForegroundRole)
+        {
+            return QColor(Qt::darkGreen);
+        }
+    }
+
+    return {};
 }
 
-bool VersionTreeModel::isFileNode(
-    const QModelIndex& index) const
-{
-    return index.isValid() && index.internalId() == -1;
-}
 
-VersionInfo VersionTreeModel::versionAt(
-    const QModelIndex& index) const
+VersionInfo VersionTreeModel::versionAt(const QModelIndex& index) const
 {
-    if (!index.isValid() || isFileNode(index))
+    if (!index.isValid() || !index.parent().isValid())
         return VersionInfo{};
 
-    const int fileRow = static_cast<int>(index.internalId());
-    const int versionRow = index.row();
+    const VersionNode* v =
+        static_cast<const VersionNode*>(index.internalPointer());
+    const FileNode* f =
+        static_cast<const FileNode*>(index.parent().internalPointer());
 
-    const FileNode& file = m_files[fileRow];
-    const VersionNode& v = file.m_versions[versionRow];
+    if (!v || !f)
+        return VersionInfo{};
 
     VersionInfo info;
-    info.filePath = file.m_filePath;
-    info.versionId = v.m_versionId;
-    info.timestamp = v.m_time;
+    info.filePath  = f->m_filePath;
+    info.versionId = v->m_versionId;
+    info.timestamp = v->m_time;
     return info;
 }
 
-VersionInfo VersionTreeModel::versionInfo(
-    const QModelIndex& index) const
+void VersionTreeModel::setCurrentVersions(const QMap<QString, QString> &current)
 {
-    return versionAt(index);
+    m_currentVersions = current;
+
+    if (m_files.isEmpty())
+        return;
+
+    QModelIndex topLeft = index(0, 0, QModelIndex());
+    if (!topLeft.isValid())
+        return;
+
+    QModelIndex bottomRight =
+        index(m_files.size() - 1, 0, QModelIndex());
+
+    emit dataChanged(
+        topLeft,
+        bottomRight,
+        { Qt::DisplayRole, Qt::FontRole, Qt::ForegroundRole }
+    );
 }
