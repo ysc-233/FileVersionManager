@@ -19,6 +19,8 @@ public:
     bool rollback(const QString& filePath, const QString& versionId);
 
     QMap<QString, QString> currentVersions() const;
+    VersionInfo currentVersionInfo(const QString& filePath) const;
+    static QString buildDiffText(const VersionInfo& current,const VersionInfo& target);
 
 public slots:
     void onFileChanged(const QString& filePath);

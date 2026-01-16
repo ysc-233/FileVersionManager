@@ -11,7 +11,7 @@ MetadataManager::MetadataManager(const QString& rootPath)
 {
     m_metadataFile = metadataFilePath();
     ensureMetadata();
-
+    const QString objectsDir = m_rootPath + "/.fvm/objects";
     const QJsonDocument doc = load();
     const QJsonObject root = doc.object();
     const QJsonObject filesObj = root["files"].toObject();
@@ -27,10 +27,10 @@ MetadataManager::MetadataManager(const QString& rootPath)
             VersionInfo info;
             info.filePath = filePath;
             info.versionId = obj["versionId"].toString();
-            info.timestamp = QDateTime::fromString(
-                obj["timestamp"].toString(),
-                "yyyy-MM-dd HH:mm:ss");
-
+            info.timestamp = QDateTime::fromString(obj["timestamp"].toString(),"yyyy-MM-dd HH:mm:ss");
+            QFileInfo fi(objectsDir + "/" + info.versionId);
+            if (fi.exists())
+                info.fileSize = fi.size();
             list.append(info);
         }
         m_data.insert(filePath, list);
@@ -97,8 +97,7 @@ bool MetadataManager::save()
         for (const auto& v : it.value()) {
             QJsonObject obj;
             obj["versionId"] = v.versionId;
-            obj["timestamp"] =
-                v.timestamp.toString("yyyy-MM-dd HH:mm:ss");
+            obj["timestamp"] = v.timestamp.toString("yyyy-MM-dd HH:mm:ss");
             arr.append(obj);
         }
         filesObj[it.key()] = arr;

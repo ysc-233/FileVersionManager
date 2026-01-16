@@ -8,7 +8,7 @@
 struct VersionNode {
     QString m_versionId;
     QDateTime m_time;
-
+    qint64 m_fileSize;
     bool operator==(const VersionNode& other) const
     {
         return m_versionId == other.m_versionId;

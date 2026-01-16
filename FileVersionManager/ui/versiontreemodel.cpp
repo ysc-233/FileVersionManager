@@ -20,6 +20,7 @@ void VersionTreeModel::setAllVersions(const QMap<QString, QList<VersionInfo>>& d
             VersionNode node;
             node.m_versionId = info.versionId;
             node.m_time = info.timestamp;
+            node.m_fileSize = info.fileSize;
             file.m_versions.push_back(node);
         }
         m_files.push_back(file);
@@ -191,6 +192,7 @@ VersionInfo VersionTreeModel::versionAt(const QModelIndex& index) const
     info.filePath  = f->m_filePath;
     info.versionId = v->m_versionId;
     info.timestamp = v->m_time;
+    info.fileSize = v->m_fileSize;
     return info;
 }
 

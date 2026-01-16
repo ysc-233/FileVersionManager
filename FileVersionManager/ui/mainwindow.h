@@ -22,6 +22,9 @@ public:
     ~MainWindow();
 
 private:
+    bool confirmRollbackWithDiff(const VersionInfo& current,const VersionInfo& target);
+
+private:
     Ui::MainWindow *ui;
     FileWatcher* m_watcher;
     VersionManager* m_versionManager;

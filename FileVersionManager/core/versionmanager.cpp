@@ -112,3 +112,51 @@ QMap<QString, QString> VersionManager::currentVersions() const
 
     return result;
 }
+
+VersionInfo VersionManager::currentVersionInfo(const QString &filePath) const
+{
+    VersionInfo info;
+    info.filePath = filePath;
+
+    // 1. 计算当前文件 hash
+    QString hash = FileHasher::sha256(filePath);
+    if (hash.isEmpty())
+        return {};
+
+    info.versionId = hash;
+
+    // 2. 文件系统信息
+    QFileInfo fi(filePath);
+    if (fi.exists())
+    {
+        info.fileSize  = fi.size();
+        info.timestamp = fi.lastModified();
+    }
+
+    return info;
+}
+
+QString VersionManager::buildDiffText(const VersionInfo &current, const VersionInfo &target)
+{
+    QString text;
+
+    text += "版本对比\n";
+
+    if (current.versionId == target.versionId)
+        text += "内容一致\n";
+    else
+        text += "内容不同\n";
+
+    text += QString("  当前: %1\n").arg(current.versionId.left(12));
+    text += QString("  目标: %1\n\n").arg(target.versionId.left(12));
+
+    text += "文件大小:\n";
+    text += QString("  当前: %1 KB\n").arg(current.fileSize / 1024.0, 0, 'f', 2);
+    text += QString("  目标: %1 KB\n\n").arg(target.fileSize / 1024.0, 0, 'f', 2);
+
+    text += "修改时间:\n";
+    text += QString("  当前: %1\n").arg(current.timestamp.toString("yyyy-MM-dd HH:mm:ss"));
+    text += QString("  目标: %1\n").arg(target.timestamp.toString("yyyy-MM-dd HH:mm:ss"));
+
+    return text;
+}
