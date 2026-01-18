@@ -13,6 +13,7 @@ VersionManager::VersionManager(const QString& rootPath, QObject* parent)
       m_metadata(rootPath),
       m_storage(rootPath)
 {
+    Logger::init(rootPath);
 }
 
 QList<VersionInfo> VersionManager::versions(const QString& filePath) const
@@ -38,7 +39,7 @@ void VersionManager::onFileChanged(const QString& filePath)
 
     if (m_metadata.hasVersion(filePath, hash))
     {
-        Logger::info("Version exited");
+        qDebug()<<"Version exited";
         return;
     }
 
@@ -51,34 +52,45 @@ void VersionManager::onFileChanged(const QString& filePath)
 
     m_metadata.addVersion(info);
     m_metadata.save();
-    Logger::info("Version created:"+hash.left(8));
+    qDebug()<<"Version created:"+hash.left(8);
+    Logger::info(QString("Version created: file=%1 version=%2").arg(info.filePath).arg(info.versionId.left(8)));
 }
 
-bool VersionManager::rollback(const QString& filePath,const QString& versionId)
+bool VersionManager::rollback(const QString& filePath,const QString& versionId,RollbackError* error)
 {
+    Logger::info(QString("Rollback requested: file=%1 target=%2").arg(filePath).arg(versionId.left(8)));
+    if (error) *error = RollbackError::None;
     // 1. 查元数据，确保版本存在
     const VersionInfo info = m_metadata.find(filePath, versionId);
     if (info.versionId.isEmpty())
+    {
+        if (error) *error = RollbackError::VersionNotFound;
         return false;
+    }
 
     // 2. 读取版本内容
     const QByteArray data = m_storage.load(versionId);
     if (data.isEmpty())
+    {
+        if (error) *error = RollbackError::LoadFailed;
         return false;
-
-    QFileInfo fi(filePath);
-    QDir dir = fi.dir();
+    }
 
     // 3. 临时文件（同目录，保证 rename 原子性）
     const QString tmpPath = filePath + ".fvm_tmp";
-
     {
         QFile tmp(tmpPath);
         if (!tmp.open(QIODevice::WriteOnly))
+        {
+            if (error) *error = RollbackError::WriteFailed;
             return false;
+        }
 
         if (tmp.write(data) != data.size())
+        {
+            if (error) *error = RollbackError::WriteFailed;
             return false;
+        }
 
         tmp.flush();
         tmp.close();
@@ -89,6 +101,7 @@ bool VersionManager::rollback(const QString& filePath,const QString& versionId)
     if (!QFile::rename(tmpPath, filePath))
     {
         QFile::remove(tmpPath);
+        if (error) *error = RollbackError::RenameFailed;
         return false;
     }
 

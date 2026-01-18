@@ -1,11 +1,17 @@
 #include "ui/mainwindow.h"
 
 #include <QApplication>
+#include "utils/logger.h"
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
+
     MainWindow w;
     w.show();
-    return a.exec();
+    Logger::info("Application started");
+    int ret = app.exec();
+
+    Logger::info("Application exited normally");
+    return ret;
 }

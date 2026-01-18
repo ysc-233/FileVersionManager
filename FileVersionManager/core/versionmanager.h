@@ -11,12 +11,21 @@ class VersionManager : public QObject
 {
     Q_OBJECT
 public:
+    enum class RollbackError
+    {
+        None,
+        VersionNotFound,
+        LoadFailed,
+        WriteFailed,
+        RenameFailed
+    };
+
     explicit VersionManager(const QString& rootPath, QObject* parent = nullptr);
 
     QList<VersionInfo> versions(const QString& filePath) const;
     QMap<QString, QList<VersionInfo>> allVersions() const;
 
-    bool rollback(const QString& filePath, const QString& versionId);
+    bool rollback(const QString& filePath, const QString& versionId,RollbackError* error = nullptr);
 
     QMap<QString, QString> currentVersions() const;
     VersionInfo currentVersionInfo(const QString& filePath) const;

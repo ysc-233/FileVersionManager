@@ -1,5 +1,15 @@
 {
     "files": {
+        "D:/Projects/FileVersionManager/tests/test - 副本 - 副本.txt": [
+            {
+                "timestamp": "2026-01-19 00:52:01",
+                "versionId": "a80b46f74675705fd581af2e4662f3a4034edd84f76fdd7902fd2873169189a2"
+            },
+            {
+                "timestamp": "2026-01-19 00:52:14",
+                "versionId": "0a93ea7d0275ccde514ef95c55528f6980c3c2209d98e11195822c2093e1073c"
+            }
+        ],
         "D:/Projects/FileVersionManager/tests/test - 副本.txt": [
             {
                 "timestamp": "2026-01-15 02:01:03",
