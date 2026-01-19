@@ -2,6 +2,8 @@
 #include "ui_mainwindow.h"
 #include <QMessageBox>
 #include <QDir>
+#include <QFileDialog>
+#include <QTimer>
 #include "versiontreemodel.h"
 #include "core/filewatcher.h"
 #include "core/versionmanager.h"
@@ -13,11 +15,11 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    const QString watchPath = "D:/Projects/FileVersionManager/tests";
-    // core
+    // 1. 先创建 core 对象
     m_watcher = new FileWatcher(this);
-    m_versionManager = new VersionManager(watchPath, this);
-    // model / view
+    m_versionManager = nullptr;
+
+    // 2. 创建 model / view
     m_versionModel = new VersionTreeModel(this);
     m_versionView = new QTreeView(this);
     m_versionView->setModel(m_versionModel);
@@ -29,29 +31,66 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(m_versionView);
     ui->gpb_version->setLayout(layout);
 
-    // 启动时加载所有历史版本
-    m_versionModel->setAllVersions(m_versionManager->allVersions());
-    m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
-    // 文件变化 → 版本生成 → UI 刷新
-    connect(m_watcher, &FileWatcher::fileChanged,this, [=](const QString& path)
+    // 3. 连接信号（注意防空）
+    connect(m_watcher, &FileWatcher::fileChanged,this, [this](const QString& path)
     {
+        if (!m_versionManager)
+            return;
+
         m_versionManager->onFileChanged(path);
         m_versionModel->setAllVersions(m_versionManager->allVersions());
-        m_versionView->expandAll();
-
         m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
+        m_versionView->expandAll();
     });
 
-    // 回滚
-    connect(ui->btn_rollBack, &QPushButton::clicked,this,&MainWindow::rollBack);
+    connect(ui->btn_rollBack, &QPushButton::clicked,this, &MainWindow::rollBack);
 
-    // watcher
-    m_watcher->addWatchPath(watchPath);
+    // 4. 选择 workspace
+    QString watchPath = QFileDialog::getExistingDirectory(this, "Select Workspace");
+
+    if (watchPath.isEmpty())
+    {
+        QTimer::singleShot(0, qApp, &QApplication::quit);
+        return;
+    }
+    setWorkspace(watchPath);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+bool MainWindow::setWorkspace(const QString &path)
+{
+    // 1. 彻底停 watcher
+    m_watcher->blockSignals(true);
+    m_watcher->clear();
+
+    // 2. 安全释放旧 manager
+    if (m_versionManager) {
+        m_versionManager->deleteLater();
+        m_versionManager = nullptr;
+    }
+
+    // 3. 重建 manager
+    m_versionManager = new VersionManager(path, this);
+    m_versionManager->initializeWorkspace();
+    // 4. Logger 跟随 workspace
+    Logger::init(path);
+
+    // 5. 恢复 watcher
+    m_watcher->blockSignals(false);
+    m_watcher->addWatchPath(path);
+
+    // 6. 刷 UI
+    m_versionModel->setAllVersions(
+        m_versionManager->allVersions());
+    m_versionModel->setCurrentVersions(
+        m_versionManager->currentVersions());
+
+    m_versionView->expandAll();
+    return true;
 }
 
 bool MainWindow::confirmRollbackWithDiff(const VersionInfo &current, const VersionInfo &target)
@@ -62,9 +101,7 @@ bool MainWindow::confirmRollbackWithDiff(const VersionInfo &current, const Versi
     box.setIcon(QMessageBox::Warning);
     box.setWindowTitle("Confirm Rollback");
 
-    const bool sameVersion =
-            !current.versionId.isEmpty() &&
-            current.versionId == target.versionId;
+    const bool sameVersion = !current.versionId.isEmpty() && current.versionId == target.versionId;
 
     if (sameVersion)
     {
@@ -83,10 +120,8 @@ bool MainWindow::confirmRollbackWithDiff(const VersionInfo &current, const Versi
 
     box.setDetailedText(diffText);
 
-    QPushButton* btnRollback =
-            box.addButton("Rollback", QMessageBox::AcceptRole);
-    QPushButton* btnCancel =
-            box.addButton("Cancel", QMessageBox::RejectRole);
+    QPushButton* btnRollback = box.addButton("Rollback", QMessageBox::AcceptRole);
+    QPushButton* btnCancel = box.addButton("Cancel", QMessageBox::RejectRole);
 
     // Disable rollback when versions are identical
     btnRollback->setEnabled(!sameVersion);
@@ -148,25 +183,4 @@ void MainWindow::rollBack()
                  .arg(target.filePath).arg(target.versionId.left(8)));
 
     m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
-}
-
-void MainWindow::switchWorkspace(const QString& newPath)
-{
-    // 1. 停止 watcher
-//    m_watcher->clear();
-
-    // 2. 关闭旧仓库日志
-    Logger::shutdown();
-
-    // 3. 销毁旧 manager（可选但推荐）
-    delete m_versionManager;
-
-    // 4. 创建新仓库
-    m_versionManager = new VersionManager(newPath, this);
-
-    // 5. 初始化日志（在 VM 构造中或这里）
-    Logger::init(newPath);
-
-    // 6. 重新 watch
-    m_watcher->addWatchPath(newPath);
 }

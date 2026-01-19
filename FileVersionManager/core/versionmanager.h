@@ -21,6 +21,7 @@ public:
     };
 
     explicit VersionManager(const QString& rootPath, QObject* parent = nullptr);
+    void initializeWorkspace();
 
     QList<VersionInfo> versions(const QString& filePath) const;
     QMap<QString, QList<VersionInfo>> allVersions() const;
@@ -35,6 +36,7 @@ public slots:
     void onFileChanged(const QString& filePath);
 
 private:
+    QString m_rootPath;
     MetadataManager m_metadata;
     FileStorage m_storage;
 };

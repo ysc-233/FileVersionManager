@@ -25,6 +25,13 @@ void FileWatcher::addWatchPath(const QString &path)
     qDebug() << "Watching directory:" << path;
 }
 
+void FileWatcher::clear()
+{
+    auto filePathList = m_watcher.files();
+    if(!filePathList.isEmpty())
+        m_watcher.removePaths(filePathList);
+}
+
 void FileWatcher::onFileChanged(const QString &path)
 {
     emit fileChanged(path);

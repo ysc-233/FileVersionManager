@@ -22,11 +22,11 @@ public:
     ~MainWindow();
 
 private:
+    bool setWorkspace(const QString& path);
     bool confirmRollbackWithDiff(const VersionInfo& current,const VersionInfo& target);
 
 private slots:
     void rollBack();
-    void switchWorkspace(const QString& newPath);
 
 private:
     Ui::MainWindow *ui;

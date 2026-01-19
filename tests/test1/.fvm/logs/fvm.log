@@ -1,0 +1,12 @@
+2026-01-19 22:46:29 [INFO] Application started
+2026-01-19 22:46:49 [INFO] Version created: file=D:/Projects/FileVersionManager/tests/test1/test1_1.txt version=f1b2f662
+2026-01-19 22:46:54 [INFO] Version created: file=D:/Projects/FileVersionManager/tests/test1/test1_2.txt version=d4735e3a
+2026-01-19 22:46:57 [INFO] Version created: file=D:/Projects/FileVersionManager/tests/test1/test1_3.txt version=4e074085
+2026-01-19 22:47:05 [INFO] Version created: file=D:/Projects/FileVersionManager/tests/test1/test1_3.txt version=1c573336
+2026-01-19 22:47:14 [INFO] Version created: file=D:/Projects/FileVersionManager/tests/test1/test1_2.txt version=5db685cb
+2026-01-19 22:47:23 [INFO] Version created: file=D:/Projects/FileVersionManager/tests/test1/test1_1.txt version=82b80810
+2026-01-19 22:47:28 [INFO] Rollback requested: file=D:/Projects/FileVersionManager/tests/test1/test1_1.txt target=f1b2f662
+2026-01-19 22:47:29 [INFO] Rollback succeeded: file=D:/Projects/FileVersionManager/tests/test1/test1_1.txt target=f1b2f662
+2026-01-19 22:47:52 [INFO] Rollback requested: file=D:/Projects/FileVersionManager/tests/test1/test1_1.txt target=82b80810
+2026-01-19 22:47:53 [INFO] Rollback succeeded: file=D:/Projects/FileVersionManager/tests/test1/test1_1.txt target=82b80810
+2026-01-19 22:47:56 [INFO] Application exited normally

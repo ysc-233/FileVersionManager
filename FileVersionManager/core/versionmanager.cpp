@@ -14,6 +14,49 @@ VersionManager::VersionManager(const QString& rootPath, QObject* parent)
       m_storage(rootPath)
 {
     Logger::init(rootPath);
+    m_rootPath = rootPath;
+}
+
+void VersionManager::initializeWorkspace()
+{
+    QDir dir(m_rootPath);
+    QFileInfoList files = dir.entryInfoList(QDir::Files | QDir::NoSymLinks | QDir::Readable,QDir::Name);
+
+    for (const QFileInfo& fi : files)
+    {
+        const QString filePath = fi.absoluteFilePath();
+
+        // 已有版本，跳过
+        if (!m_metadata.versions(filePath).isEmpty())
+            continue;
+
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly))
+            continue;
+
+        QByteArray data = file.readAll();
+        file.close();
+
+        QString hash = FileHasher::sha256(filePath);
+        if (hash.isEmpty())
+            continue;
+
+        // 存储内容
+        m_storage.save(hash, data);
+
+        // 写入 metadata
+        VersionInfo info;
+        info.filePath  = filePath;
+        info.versionId = hash;
+        info.timestamp = fi.lastModified();
+        info.fileSize  = fi.size();
+
+        m_metadata.addVersion(info);
+
+        Logger::info(QString("Initial version created: %1 [%2]").arg(fi.fileName()).arg(hash.left(8)));
+    }
+
+    m_metadata.save();
 }
 
 QList<VersionInfo> VersionManager::versions(const QString& filePath) const
@@ -153,23 +196,23 @@ QString VersionManager::buildDiffText(const VersionInfo &current, const VersionI
 {
     QString text;
 
-    text += "版本对比\n";
+    text += "Version Compare:\n";
 
     if (current.versionId == target.versionId)
-        text += "内容一致\n";
+        text += "Content is consistent\n";
     else
-        text += "内容不同\n";
+        text += "Content is different\n";
 
-    text += QString("  当前: %1\n").arg(current.versionId.left(12));
-    text += QString("  目标: %1\n\n").arg(target.versionId.left(12));
+    text += QString("Current: %1\n").arg(current.versionId.left(12));
+    text += QString("Target: %1\n\n").arg(target.versionId.left(12));
 
-    text += "文件大小:\n";
-    text += QString("  当前: %1 KB\n").arg(current.fileSize / 1024.0, 0, 'f', 2);
-    text += QString("  目标: %1 KB\n\n").arg(target.fileSize / 1024.0, 0, 'f', 2);
+    text += "File size:\n";
+    text += QString("Current: %1 KB\n").arg(current.fileSize / 1024.0, 0, 'f', 2);
+    text += QString("Target: %1 KB\n\n").arg(target.fileSize / 1024.0, 0, 'f', 2);
 
-    text += "修改时间:\n";
-    text += QString("  当前: %1\n").arg(current.timestamp.toString("yyyy-MM-dd HH:mm:ss"));
-    text += QString("  目标: %1\n").arg(target.timestamp.toString("yyyy-MM-dd HH:mm:ss"));
+    text += "Modification Time:\n";
+    text += QString("Current: %1\n").arg(current.timestamp.toString("yyyy-MM-dd HH:mm:ss"));
+    text += QString("Target: %1\n").arg(target.timestamp.toString("yyyy-MM-dd HH:mm:ss"));
 
     return text;
 }

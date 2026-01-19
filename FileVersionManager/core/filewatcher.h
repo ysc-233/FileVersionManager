@@ -13,6 +13,8 @@ public:
 
     void addWatchPath(const QString& path);
 
+    void clear();
+
 signals:
     void fileChanged(const QString& path);
 
