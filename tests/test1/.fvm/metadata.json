@@ -1,33 +1,43 @@
 {
     "files": {
-        "D:/Projects/FileVersionManager/tests/test1/test1_1.txt": [
+        "folder/folderTest.txt": [
             {
-                "timestamp": "2026-01-19 22:46:49",
-                "versionId": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
-            },
-            {
-                "timestamp": "2026-01-19 22:47:23",
-                "versionId": "82b808101fdac32d756c2f93e76141a282c4a4072e148b5b666d9bb56c36a832"
+                "fileSize": 13,
+                "timestamp": "2026-01-23 01:14:55",
+                "versionId": "8492591b688b14f100a48da4e8ecb956e9accaca5504ef58094e364f64ff71d8"
             }
         ],
-        "D:/Projects/FileVersionManager/tests/test1/test1_2.txt": [
+        "folder2/folderTest2.txt": [
             {
-                "timestamp": "2026-01-19 22:46:54",
-                "versionId": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
-            },
-            {
-                "timestamp": "2026-01-19 22:47:14",
-                "versionId": "5db685cb1595ffe7c3421f2b3547eb2e88081078e10afea27d807040d5a159d6"
+                "fileSize": 18,
+                "timestamp": "2026-01-23 01:18:35",
+                "versionId": "a5ba7e04da4c1d617e3ff3012d4f1f1083f149da7657d1349985e91e851c616c"
             }
         ],
-        "D:/Projects/FileVersionManager/tests/test1/test1_3.txt": [
+        "test1_1.txt": [
             {
-                "timestamp": "2026-01-19 22:46:57",
+                "fileSize": 6,
+                "timestamp": "2026-01-23 01:11:19",
+                "versionId": "bcb15f821479b4d5772bd0ca866c00ad5f926e3580720659cc80d39c9d09802a"
+            },
+            {
+                "fileSize": 11,
+                "timestamp": "2026-01-23 01:18:51",
+                "versionId": "3591d1fdc94ee5e0e5712e60d43953902430ede83723f80310e912f4fa0283df"
+            }
+        ],
+        "test1_2.txt": [
+            {
+                "fileSize": 6,
+                "timestamp": "2026-01-23 00:44:52",
+                "versionId": "7a47890716e93e688a5cce34920da387cab6d358429057ea0096a5aa8efa8983"
+            }
+        ],
+        "test1_3.txt": [
+            {
+                "fileSize": 1,
+                "timestamp": "2026-01-23 00:34:57",
                 "versionId": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce"
-            },
-            {
-                "timestamp": "2026-01-19 22:47:05",
-                "versionId": "1c5733364c760c72c82c91627bd9831d00466dfade5764635325ba0c4135f7e8"
             }
         ]
     }

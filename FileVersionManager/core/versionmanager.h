@@ -33,7 +33,7 @@ public:
     static QString buildDiffText(const VersionInfo& current,const VersionInfo& target);
 
 public slots:
-    void onFileChanged(const QString& filePath);
+    void onFileChanged(const QString& absPath);
 
 private:
     QString m_rootPath;

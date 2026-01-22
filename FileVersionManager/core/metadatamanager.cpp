@@ -17,23 +17,43 @@ MetadataManager::MetadataManager(const QString& rootPath)
     const QJsonObject filesObj = root["files"].toObject();
 
     for (auto it = filesObj.begin(); it != filesObj.end(); ++it) {
-        const QString filePath = it.key();
-        const QJsonArray arr = it.value().toArray();
 
+        QString storedPath = it.key();
+        QString relativePath;
+
+        // 兼容旧数据：如果是绝对路径，转为相对路径
+        if (QDir::isAbsolutePath(storedPath)) {
+            relativePath = QDir(m_rootPath).relativeFilePath(storedPath);
+        } else {
+            relativePath = storedPath;
+        }
+
+        const QJsonArray arr = it.value().toArray();
         QList<VersionInfo> list;
+
         for (const auto& v : arr) {
             QJsonObject obj = v.toObject();
 
             VersionInfo info;
-            info.filePath = filePath;
+            info.filePath  = relativePath;
             info.versionId = obj["versionId"].toString();
-            info.timestamp = QDateTime::fromString(obj["timestamp"].toString(),"yyyy-MM-dd HH:mm:ss");
-            QFileInfo fi(objectsDir + "/" + info.versionId);
-            if (fi.exists())
-                info.fileSize = fi.size();
+            info.timestamp = QDateTime::fromString(
+                obj["timestamp"].toString(),
+                "yyyy-MM-dd HH:mm:ss"
+            );
+            info.fileSize = obj["fileSize"].toInt();
+
+            if (info.fileSize == 0) {
+                QFileInfo fi(objectsDir + "/" + info.versionId);
+                if (fi.exists())
+                    info.fileSize = fi.size();
+            }
+
             list.append(info);
+            Q_ASSERT(!QDir::isAbsolutePath(info.filePath));
         }
-        m_data.insert(filePath, list);
+
+        m_data.insert(relativePath, list);
     }
 }
 
@@ -98,6 +118,7 @@ bool MetadataManager::save()
             QJsonObject obj;
             obj["versionId"] = v.versionId;
             obj["timestamp"] = v.timestamp.toString("yyyy-MM-dd HH:mm:ss");
+            obj["fileSize"] = v.fileSize;
             arr.append(obj);
         }
         filesObj[it.key()] = arr;

@@ -7,8 +7,8 @@
 #include "versiontreemodel.h"
 #include "core/filewatcher.h"
 #include "core/versionmanager.h"
-#include "utils/logger.h"
-
+#include "utils/Logger.h"
+#include <QDebug>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -31,12 +31,11 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(m_versionView);
     ui->gpb_version->setLayout(layout);
 
-    // 3. 连接信号（注意防空）
+    // 3. 连接信号
     connect(m_watcher, &FileWatcher::fileChanged,this, [this](const QString& path)
     {
         if (!m_versionManager)
             return;
-
         m_versionManager->onFileChanged(path);
         m_versionModel->setAllVersions(m_versionManager->allVersions());
         m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
