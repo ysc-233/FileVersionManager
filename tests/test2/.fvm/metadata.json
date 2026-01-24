@@ -1,0 +1,49 @@
+{
+    "files": {
+        "test2-1/20260124.txt": [
+            {
+                "fileSize": 14,
+                "timestamp": "2026-01-24 11:38:01",
+                "versionId": "80bafccb2424b14500ba2f6f539f583e6d06bbbf8ede97a7fce1efd1045c9211"
+            },
+            {
+                "fileSize": 24,
+                "timestamp": "2026-01-24 11:46:42",
+                "versionId": "c1a2047e9f26b551b5c5c12410dd995ceffd62e5475b27ea836a786c0348bfd8"
+            }
+        ],
+        "test2-2/20260124.txt": [
+            {
+                "fileSize": 39,
+                "timestamp": "2026-01-24 11:40:41",
+                "versionId": "331b5a4026dcf71662a20484f6af6ae103d4c184209c65de99a1c68f5fc9d786"
+            }
+        ],
+        "test2_1.txt": [
+            {
+                "fileSize": 17,
+                "timestamp": "2026-01-19 23:28:43",
+                "versionId": "91a3d2edc37c05ed24fd8339efa0b839209bd450fffb20db04459bab6d91a657"
+            },
+            {
+                "fileSize": 20,
+                "timestamp": "2026-01-24 11:41:28",
+                "versionId": "be5bb5e28fea7acd855e53f98b8ee10e31a1c5da104945aa341908a74eba22c5"
+            }
+        ],
+        "test2_2.txt": [
+            {
+                "fileSize": 5,
+                "timestamp": "2026-01-19 23:28:43",
+                "versionId": "1630fae12b4fdfa99ace272ffa8ed39788b88efd1e2104c0166a257862438560"
+            }
+        ],
+        "test3_3.txt": [
+            {
+                "fileSize": 15,
+                "timestamp": "2026-01-19 23:28:43",
+                "versionId": "eb1de3e5f03d6c7c2c1b89278443cedf2db7f7deffa5ac597cefd3b3a9a22146"
+            }
+        ]
+    }
+}

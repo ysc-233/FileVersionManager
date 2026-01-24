@@ -1,0 +1,44 @@
+{
+    "files": {
+        "folder/folderTest.txt": [
+            {
+                "fileSize": 13,
+                "timestamp": "2026-01-23 01:14:55",
+                "versionId": "8492591b688b14f100a48da4e8ecb956e9accaca5504ef58094e364f64ff71d8"
+            }
+        ],
+        "folder2/folderTest2.txt": [
+            {
+                "fileSize": 18,
+                "timestamp": "2026-01-23 01:18:35",
+                "versionId": "a5ba7e04da4c1d617e3ff3012d4f1f1083f149da7657d1349985e91e851c616c"
+            }
+        ],
+        "test1_1.txt": [
+            {
+                "fileSize": 6,
+                "timestamp": "2026-01-23 01:11:19",
+                "versionId": "bcb15f821479b4d5772bd0ca866c00ad5f926e3580720659cc80d39c9d09802a"
+            },
+            {
+                "fileSize": 11,
+                "timestamp": "2026-01-23 01:18:51",
+                "versionId": "3591d1fdc94ee5e0e5712e60d43953902430ede83723f80310e912f4fa0283df"
+            }
+        ],
+        "test1_2.txt": [
+            {
+                "fileSize": 6,
+                "timestamp": "2026-01-23 00:44:52",
+                "versionId": "7a47890716e93e688a5cce34920da387cab6d358429057ea0096a5aa8efa8983"
+            }
+        ],
+        "test1_3.txt": [
+            {
+                "fileSize": 1,
+                "timestamp": "2026-01-23 00:34:57",
+                "versionId": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce"
+            }
+        ]
+    }
+}

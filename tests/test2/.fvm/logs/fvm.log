@@ -1,0 +1,8 @@
+2026-01-24 11:41:21 [INFO] Application started
+2026-01-24 11:41:28 [INFO] Version created: file=test2_1.txt version=be5bb5e2
+2026-01-24 11:41:49 [INFO] Application exited normally
+2026-01-24 11:46:30 [INFO] Application started
+2026-01-24 11:46:42 [INFO] Version created: file=test2-1/20260124.txt version=c1a2047e
+2026-01-24 11:46:56 [INFO] Rollback requested: file=test2-1/20260124.txt target=80bafccb
+2026-01-24 11:46:58 [INFO] Rollback succeeded: file=test2-1/20260124.txt target=80bafccb
+2026-01-24 11:47:21 [INFO] Application exited normally
