@@ -5,3 +5,6 @@
 2026-01-23 01:19:01 [INFO] Application exited normally
 2026-01-23 01:19:30 [INFO] Application started
 2026-01-23 01:20:17 [INFO] Application exited normally
+2026-01-24 11:35:35 [INFO] Application started
+2026-01-24 11:38:55 [INFO] Rollback requested: file=test1_1.txt target=3591d1fd
+2026-01-24 11:38:56 [INFO] Rollback succeeded: file=test1_1.txt target=3591d1fd

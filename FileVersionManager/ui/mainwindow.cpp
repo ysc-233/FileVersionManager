@@ -32,17 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->gpb_version->setLayout(layout);
 
     // 3. 连接信号
-    connect(m_watcher, &FileWatcher::fileChanged,this, [this](const QString& path)
-    {
-        if (!m_versionManager)
-            return;
-        m_versionManager->onFileChanged(path);
-        m_versionModel->setAllVersions(m_versionManager->allVersions());
-        m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
-        m_versionView->expandAll();
-    });
-
-    connect(ui->btn_rollBack, &QPushButton::clicked,this, &MainWindow::rollBack);
+    setConnection();
 
     // 4. 选择 workspace
     QString watchPath = QFileDialog::getExistingDirectory(this, "Select Workspace");
@@ -62,6 +52,7 @@ MainWindow::~MainWindow()
 
 bool MainWindow::setWorkspace(const QString &path)
 {
+    ui->led_workspace->setText(path);
     // 1. 彻底停 watcher
     m_watcher->blockSignals(true);
     m_watcher->clear();
@@ -128,6 +119,32 @@ bool MainWindow::confirmRollbackWithDiff(const VersionInfo &current, const Versi
     box.exec();
 
     return box.clickedButton() == btnRollback;
+}
+
+void MainWindow::setConnection()
+{
+    connect(m_watcher, &FileWatcher::fileChanged,this, [this](const QString& path)
+    {
+        if (!m_versionManager)
+            return;
+        m_versionManager->onFileChanged(path);
+        m_versionModel->setAllVersions(m_versionManager->allVersions());
+        m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
+        m_versionView->expandAll();
+    });
+
+    connect(ui->btn_rollBack, &QPushButton::clicked,this, &MainWindow::rollBack);
+
+    connect(ui->btn_changeWorkspace, &QPushButton::clicked,this, [=]
+    {
+        QString watchPath = QFileDialog::getExistingDirectory(this, "Select Workspace");
+
+        if (watchPath.isEmpty())
+        {
+            return;
+        }
+        setWorkspace(watchPath);
+    });
 }
 
 void MainWindow::rollBack()

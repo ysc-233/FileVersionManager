@@ -24,6 +24,7 @@ public:
 private:
     bool setWorkspace(const QString& path);
     bool confirmRollbackWithDiff(const VersionInfo& current,const VersionInfo& target);
+    void setConnection();
 
 private slots:
     void rollBack();
