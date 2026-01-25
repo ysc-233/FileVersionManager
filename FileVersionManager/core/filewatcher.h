@@ -5,24 +5,24 @@
 #include <QObject>
 #include <QFileSystemWatcher>
 #include <QStringList>
-
+#include <QSet>
 class FileWatcher : public QObject {
     Q_OBJECT
 public:
     explicit FileWatcher(QObject* parent = nullptr);
 
+    void setWorkspace(const QString& workspaceRoot);
     void addWatchPath(const QString& path);
 
-    void clear();
-
 signals:
-    void fileChanged(const QString& path);
-
-private slots:
-    void onFileChanged(const QString& path);
-    void onDirectoryChanged(const QString& path);
+    void fileChanged(const QString& relPath);
+    void fileDeleted(const QString &relPath);
 
 private:
     QFileSystemWatcher m_watcher;
+    QString m_workspaceRoot;
+    QSet<QString> m_watchedFiles;
+    QSet<QString> m_watchedDirs;
+    void watchDirectory(const QString& absPath);
 };
 #endif // FILEm_watcherH

@@ -42,6 +42,8 @@ MetadataManager::MetadataManager(const QString& rootPath)
                 "yyyy-MM-dd HH:mm:ss"
             );
             info.fileSize = obj["fileSize"].toInt();
+            QString s = obj.value("state").toString("normal");
+            info.state = (s == "deleted") ? FileState::Deleted : FileState::Normal;
 
             if (info.fileSize == 0) {
                 QFileInfo fi(objectsDir + "/" + info.versionId);
@@ -53,7 +55,7 @@ MetadataManager::MetadataManager(const QString& rootPath)
             Q_ASSERT(!QDir::isAbsolutePath(info.filePath));
         }
 
-        m_data.insert(relativePath, list);
+        m_versions.insert(relativePath, list);
     }
 }
 
@@ -91,8 +93,8 @@ QJsonDocument MetadataManager::load() const
 
 bool MetadataManager::hasVersion(const QString& filePath,const QString& versionId) const
 {
-    const auto it = m_data.find(filePath);
-    if (it == m_data.end())
+    const auto it = m_versions.find(filePath);
+    if (it == m_versions.end())
         return false;
 
     for (const auto& v : it.value()) {
@@ -104,7 +106,7 @@ bool MetadataManager::hasVersion(const QString& filePath,const QString& versionI
 
 void MetadataManager::addVersion(const VersionInfo& info)
 {
-    m_data[info.filePath].append(info);
+    m_versions[info.filePath].append(info);
 }
 
 bool MetadataManager::save()
@@ -112,13 +114,14 @@ bool MetadataManager::save()
     QJsonObject root;
     QJsonObject filesObj;
 
-    for (auto it = m_data.begin(); it != m_data.end(); ++it) {
+    for (auto it = m_versions.begin(); it != m_versions.end(); ++it) {
         QJsonArray arr;
         for (const auto& v : it.value()) {
             QJsonObject obj;
             obj["versionId"] = v.versionId;
             obj["timestamp"] = v.timestamp.toString("yyyy-MM-dd HH:mm:ss");
             obj["fileSize"] = v.fileSize;
+            obj["state"] = (v.state == FileState::Deleted) ? "deleted" : "normal";
             arr.append(obj);
         }
         filesObj[it.key()] = arr;
@@ -137,7 +140,7 @@ bool MetadataManager::save()
 
 VersionInfo MetadataManager::find(const QString& filePath,const QString& versionId) const
 {
-    const auto list = m_data.value(filePath);
+    const auto list = m_versions.value(filePath);
     for (const auto& v : list) {
         if (v.versionId == versionId)
             return v;
@@ -147,5 +150,54 @@ VersionInfo MetadataManager::find(const QString& filePath,const QString& version
 
 QList<VersionInfo> MetadataManager::versions(const QString& filePath) const
 {
-    return m_data.value(filePath);
+    return m_versions.value(filePath);
+}
+
+bool MetadataManager::hasFile(const QString &filePath) const
+{
+    return m_versions.contains(filePath);
+}
+
+void MetadataManager::markDeleted(const QString &relPath)
+{
+    if (!m_versions.contains(relPath))
+        return;
+    auto list = m_versions[relPath];
+    for (auto &v : list)
+        v.state = FileState::Deleted;
+    m_versions[relPath] = list;
+    save();
+}
+
+QString MetadataManager::latestVersionHash(const QString &filePath) const
+{
+    auto it = m_versions.find(filePath);
+    if (it == m_versions.end())
+        return QString();
+
+    const auto& list = it.value();
+    for (auto rit = list.rbegin(); rit != list.rend(); ++rit) {
+        if (rit->state == FileState::Normal)
+            return rit->versionId;
+    }
+
+    return QString();
+}
+
+void MetadataManager::renameFile(const QString &oldRelPath, const QString &newRelPath)
+{
+    if (!m_versions.contains(oldRelPath))
+        return;
+
+    if (m_versions.contains(newRelPath))
+        return; // 防御：避免覆盖已有记录
+
+    auto list = m_versions.take(oldRelPath);
+
+    for (auto& v : list) {
+        v.filePath = newRelPath;
+    }
+
+    m_versions.insert(newRelPath, list);
+    save();
 }

@@ -55,7 +55,6 @@ bool MainWindow::setWorkspace(const QString &path)
     ui->led_workspace->setText(path);
     // 1. 彻底停 watcher
     m_watcher->blockSignals(true);
-    m_watcher->clear();
 
     // 2. 安全释放旧 manager
     if (m_versionManager) {
@@ -71,7 +70,7 @@ bool MainWindow::setWorkspace(const QString &path)
 
     // 5. 恢复 watcher
     m_watcher->blockSignals(false);
-    m_watcher->addWatchPath(path);
+    m_watcher->setWorkspace(path);
 
     // 6. 刷 UI
     m_versionModel->setAllVersions(
@@ -123,11 +122,17 @@ bool MainWindow::confirmRollbackWithDiff(const VersionInfo &current, const Versi
 
 void MainWindow::setConnection()
 {
-    connect(m_watcher, &FileWatcher::fileChanged,this, [this](const QString& path)
+    connect(m_watcher, &FileWatcher::fileChanged, this, [=](const QString &relPath)
     {
-        if (!m_versionManager)
-            return;
-        m_versionManager->onFileChanged(path);
+        m_versionManager->onFileChanged(relPath);
+        m_versionModel->setAllVersions(m_versionManager->allVersions());
+        m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
+        m_versionView->expandAll();
+    });
+    connect(m_watcher, &FileWatcher::fileDeleted, this, [=](const QString &relPath){
+        qDebug()<<__FUNCTION__<<"Deleted";
+        // 文件被删除，标记 Deleted，不删除版本
+        m_versionManager->markDeleted(relPath);
         m_versionModel->setAllVersions(m_versionManager->allVersions());
         m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
         m_versionView->expandAll();
@@ -145,6 +150,7 @@ void MainWindow::setConnection()
         }
         setWorkspace(watchPath);
     });
+
 }
 
 void MainWindow::rollBack()
