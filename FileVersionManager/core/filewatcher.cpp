@@ -1,82 +1,114 @@
 #include "filewatcher.h"
-#include <QDir>
+#include <QFileInfo>
 #include <QDebug>
-#include <QDirIterator>
-
+#include <QDir>
 FileWatcher::FileWatcher(QObject* parent)
+    : QObject(parent)
 {
-    connect(&m_watcher, &QFileSystemWatcher::fileChanged,this, &FileWatcher::onFileChanged);
-    connect(&m_watcher, &QFileSystemWatcher::directoryChanged,this, &FileWatcher::onDirectoryChanged);
 }
 
-void FileWatcher::addWatchPath(const QString& rootPath)
+void FileWatcher::setWorkspace(const QString& workspaceRoot)
 {
-    QDir root(rootPath);
-    if (!root.exists()) {
-        qWarning() << "Watch path not exists:" << rootPath;
-        return;
-    }
+    m_workspaceRoot = workspaceRoot;
+    m_watchedFiles.clear();
+    m_watchedDirs.clear();
 
-    // 先清理旧监听（防止重复）
-    m_watcher.removePaths(m_watcher.directories());
+    // 清空 QFileSystemWatcher
     m_watcher.removePaths(m_watcher.files());
+    m_watcher.removePaths(m_watcher.directories());
 
-    // 递归遍历目录
-    QDirIterator it(
-        rootPath,
-        QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot,
-        QDirIterator::Subdirectories
-    );
+    addWatchPath(workspaceRoot);
+}
 
-    while (it.hasNext())
-    {
-        it.next();
-        QFileInfo fi = it.fileInfo();
-        const QString absPath = fi.absoluteFilePath();
+void FileWatcher::addWatchPath(const QString& path)
+{
+    QFileInfo fi(path);
+    if (!fi.exists()) return;
 
-        // 忽略 .fvm
-        if (absPath.contains("/.fvm/") ||
-            absPath.contains("\\.fvm\\"))
-            continue;
-
-        // 目录也要监听（用于捕获新增/删除）
-        if (fi.isDir()) {
-            m_watcher.addPath(absPath);
-        }
-        // 文件监听内容变化
-        else if (fi.isFile()) {
-            m_watcher.addPath(absPath);
+    if (fi.isDir()) {
+        watchDirectory(fi.absoluteFilePath());
+    } else {
+        if (!m_watchedFiles.contains(fi.absoluteFilePath())) {
+            m_watcher.addPath(fi.absoluteFilePath());
+            m_watchedFiles.insert(fi.absoluteFilePath());
         }
     }
 
-    // 根目录监听
-    m_watcher.addPath(rootPath);
+    // 只连接一次
+    static bool connected = false;
+    if (!connected) {
+        connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [=](const QString& absPath) {
+            QFileInfo fi(absPath);
+            QString relPath = QDir(m_workspaceRoot).relativeFilePath(absPath);
 
-    qDebug() << "Watching workspace recursively:" << rootPath;
+            if (!fi.exists()) {
+                // 文件被删除
+                if (m_watchedFiles.contains(absPath)) {
+                    m_watchedFiles.remove(absPath);
+                    emit fileDeleted(relPath);
+                }
+            } else {
+                emit fileChanged(relPath);
+                // 重新添加到 watcher（Windows 上可能只触发一次）
+                if (!m_watchedFiles.contains(absPath)) {
+                    m_watcher.addPath(absPath);
+                    m_watchedFiles.insert(absPath);
+                }
+            }
+        });
+
+        connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [=](const QString& absDir){
+            QDir dir(absDir);
+            QFileInfoList entries = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+            for (const QFileInfo& fi : entries) {
+                if (fi.isDir() && fi.fileName() != ".fvm") {
+                    watchDirectory(fi.absoluteFilePath());
+                } else if (fi.isFile()) {
+                    QString absFile = fi.absoluteFilePath();
+                    if (!m_watchedFiles.contains(absFile)) {
+                        m_watcher.addPath(absFile);
+                        m_watchedFiles.insert(absFile);
+                        emit fileChanged(QDir(m_workspaceRoot).relativeFilePath(absFile)); // 新增文件
+                    }
+                }
+            }
+
+            // 检查已删除文件
+            for (auto it = m_watchedFiles.begin(); it != m_watchedFiles.end();) {
+                QFileInfo fi(*it);
+                if (!fi.exists()) {
+                    emit fileDeleted(QDir(m_workspaceRoot).relativeFilePath(*it));
+                    it = m_watchedFiles.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        });
+
+        connected = true;
+    }
 }
-void FileWatcher::clear()
-{
-    auto filePathList = m_watcher.files();
-    if(!filePathList.isEmpty())
-        m_watcher.removePaths(filePathList);
-}
 
-void FileWatcher::onFileChanged(const QString &path)
+void FileWatcher::watchDirectory(const QString& absPath)
 {
-    emit fileChanged(path);
-}
+    if (m_watchedDirs.contains(absPath)) return;
 
-void FileWatcher::onDirectoryChanged(const QString &path)
-{
-    QDir dir(path);
-    const auto files = dir.entryList(QDir::Files);
+    QDir dir(absPath);
+    if (!dir.exists()) return;
 
-    // 新文件加入监听
-    for (const auto& file : files) {
-        const QString abs = dir.absoluteFilePath(file);
-        if (!m_watcher.files().contains(abs)) {
-            m_watcher.addPath(abs);
-            emit fileChanged(abs);
+    m_watcher.addPath(absPath);
+    m_watchedDirs.insert(absPath);
+
+    // 递归子目录
+    QFileInfoList entries = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    for (const QFileInfo& fi : entries) {
+        if (fi.isDir() && fi.fileName() != ".fvm") {
+            watchDirectory(fi.absoluteFilePath());
+        } else if (fi.isFile()) {
+            if (!m_watchedFiles.contains(fi.absoluteFilePath())) {
+                m_watcher.addPath(fi.absoluteFilePath());
+                m_watchedFiles.insert(fi.absoluteFilePath());
+            }
         }
     }
 }

@@ -21,10 +21,10 @@ VersionManager::VersionManager(const QString& rootPath, QObject* parent)
 void VersionManager::initializeWorkspace()
 {
     QDirIterator it(
-        m_rootPath,
-        QDir::Files | QDir::NoSymLinks | QDir::Readable,
-        QDirIterator::Subdirectories
-    );
+                m_rootPath,
+                QDir::Files | QDir::NoSymLinks | QDir::Readable,
+                QDirIterator::Subdirectories
+                );
 
     while (it.hasNext())
     {
@@ -33,7 +33,7 @@ void VersionManager::initializeWorkspace()
 
         // 忽略 .fvm 目录下的任何文件（关键）
         if (fi.absoluteFilePath().contains("/.fvm/") ||
-            fi.absoluteFilePath().contains("\\.fvm\\"))
+                fi.absoluteFilePath().contains("\\.fvm\\"))
             continue;
 
         const QString absPath = fi.absoluteFilePath();
@@ -79,54 +79,41 @@ QMap<QString, QList<VersionInfo>> VersionManager::allVersions() const
     return m_metadata.allVersions();
 }
 
-void VersionManager::onFileChanged(const QString& absPath)
+void VersionManager::onFileChanged(const QString& relPath)
 {
-    qDebug() << __FUNCTION__ << absPath;
-
-    // 1. 校验
-    QFileInfo fi(absPath);
-    if (!fi.exists() || !fi.isFile())
-        return;
-
-    // 2. 计算相对路径（只在 metadata 用）
-    const QString relPath = QDir(m_rootPath).relativeFilePath(absPath);
-
-    // 3. 读取文件（用绝对路径）
+    QString absPath = QDir(m_rootPath).filePath(relPath); // 用 workspace 拼绝对路径
     QFile file(absPath);
+    if (!file.exists()) {
+        Logger::info(QString("File does not exist: %1").arg(absPath));
+        return;
+    }
+
     if (!file.open(QIODevice::ReadOnly))
         return;
 
     QByteArray content = file.readAll();
-    file.close();
-
-    // 4. hash
-    const QString hash = FileHasher::sha256(content);
+    QString hash = FileHasher::sha256(content);
     if (hash.isEmpty())
         return;
 
-    // 5. 去重
     if (m_metadata.hasVersion(relPath, hash)) {
-        qDebug() << "Version exists";
+        Logger::info(QString("Version exists: %1").arg(relPath));
         return;
     }
 
-    // 6. 保存对象
     m_storage.save(hash, content);
 
-    // 7. 写 metadata
     VersionInfo info;
-    info.filePath  = relPath;   // 相对路径
+    info.filePath = relPath;
     info.versionId = hash;
     info.timestamp = QDateTime::currentDateTime();
-    info.fileSize  = content.size();
+    info.fileSize = file.size();
 
     m_metadata.addVersion(info);
     m_metadata.save();
-
-    Logger::info(QString("Version created: file=%1 version=%2")
-                 .arg(relPath)
-                 .arg(hash.left(8)));
+    Logger::info(QString("Version created: %1 [%2]").arg(relPath).arg(hash.left(8)));
 }
+
 bool VersionManager::rollback(const QString& filePath,const QString& versionId,RollbackError* error)
 {
     Logger::info(QString("Rollback requested: file=%1 target=%2").arg(filePath).arg(versionId.left(8)));
@@ -150,6 +137,7 @@ bool VersionManager::rollback(const QString& filePath,const QString& versionId,R
     // 3. 临时文件（同目录，保证 rename 原子性）
     QString absPath = m_rootPath + "/" + filePath;
     const QString tmpPath = absPath + ".fvm_tmp";
+
     {
         QFile tmp(tmpPath);
         if (!tmp.open(QIODevice::WriteOnly))
@@ -246,3 +234,9 @@ QString VersionManager::buildDiffText(const VersionInfo &current, const VersionI
 
     return text;
 }
+
+void VersionManager::markDeleted(const QString &relPath)
+{
+    m_metadata.markDeleted(relPath);
+}
+
