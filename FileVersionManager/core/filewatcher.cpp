@@ -10,105 +10,126 @@ FileWatcher::FileWatcher(QObject* parent)
 void FileWatcher::setWorkspace(const QString& workspaceRoot)
 {
     m_workspaceRoot = workspaceRoot;
-    m_watchedFiles.clear();
-    m_watchedDirs.clear();
+    if(m_watchedFiles.size()>0)
+        m_watchedFiles.clear();
+    if(m_watchedDirs.size()>0)
+        m_watchedDirs.clear();
 
     // 清空 QFileSystemWatcher
-    m_watcher.removePaths(m_watcher.files());
-    m_watcher.removePaths(m_watcher.directories());
-
-    addWatchPath(workspaceRoot);
+    if(m_watcher.files().size()>0)
+    {
+        m_watcher.removePaths(m_watcher.files());
+        m_watcher.removePaths(m_watcher.directories());
+    }
+    startWatch();
 }
 
-void FileWatcher::addWatchPath(const QString& path)
+void FileWatcher::startWatch()
 {
-    QFileInfo fi(path);
-    if (!fi.exists()) return;
+    scanAndWatchDir(m_workspaceRoot);
 
-    if (fi.isDir()) {
-        watchDirectory(fi.absoluteFilePath());
-    } else {
-        if (!m_watchedFiles.contains(fi.absoluteFilePath())) {
-            m_watcher.addPath(fi.absoluteFilePath());
-            m_watchedFiles.insert(fi.absoluteFilePath());
+    connect(&m_watcher, &QFileSystemWatcher::directoryChanged,this, [this](const QString& absDir)
+    {
+        qDebug()<<__FUNCTION__<<"directoryChanged";
+        QSet<QString> oldSet = m_dirSnapshots.value(absDir);
+
+        QDir dir(absDir);
+        QSet<QString> newSet;
+        QFileInfoList files = dir.entryInfoList(QDir::Files);
+
+        for (const QFileInfo& fi : files)
+            newSet.insert(fi.absoluteFilePath());
+
+        // 删除
+        for (const QString& f : oldSet - newSet)
+            emit fileDeleted(toRel(f));
+
+        // 新增
+        for (const QString& f : newSet - oldSet)
+        {
+            if (!m_watchedFiles.contains(f))
+            {
+                m_watcher.addPath(f);
+                m_watchedFiles.insert(f);
+            }
+            emit fileAdded(toRel(f));
         }
-    }
 
-    // 只连接一次
-    static bool connected = false;
-    if (!connected) {
-        connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [=](const QString& absPath) {
-            QFileInfo fi(absPath);
-            QString relPath = QDir(m_workspaceRoot).relativeFilePath(absPath);
+        m_dirSnapshots[absDir] = newSet;
+    });
 
-            if (!fi.exists()) {
-                // 文件被删除
-                if (m_watchedFiles.contains(absPath)) {
-                    m_watchedFiles.remove(absPath);
-                    emit fileDeleted(relPath);
-                }
-            } else {
-                emit fileChanged(relPath);
-                // 重新添加到 watcher（Windows 上可能只触发一次）
-                if (!m_watchedFiles.contains(absPath)) {
-                    m_watcher.addPath(absPath);
-                    m_watchedFiles.insert(absPath);
-                }
-            }
-        });
-
-        connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [=](const QString& absDir){
-            QDir dir(absDir);
-            QFileInfoList entries = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
-            for (const QFileInfo& fi : entries) {
-                if (fi.isDir() && fi.fileName() != ".fvm") {
-                    watchDirectory(fi.absoluteFilePath());
-                } else if (fi.isFile()) {
-                    QString absFile = fi.absoluteFilePath();
-                    if (!m_watchedFiles.contains(absFile)) {
-                        m_watcher.addPath(absFile);
-                        m_watchedFiles.insert(absFile);
-                        emit fileChanged(QDir(m_workspaceRoot).relativeFilePath(absFile)); // 新增文件
-                    }
-                }
-            }
-
-            // 检查已删除文件
-            for (auto it = m_watchedFiles.begin(); it != m_watchedFiles.end();) {
-                QFileInfo fi(*it);
-                if (!fi.exists()) {
-                    emit fileDeleted(QDir(m_workspaceRoot).relativeFilePath(*it));
-                    it = m_watchedFiles.erase(it);
-                } else {
-                    ++it;
-                }
-            }
-        });
-
-        connected = true;
-    }
+    connect(&m_watcher, &QFileSystemWatcher::fileChanged,this, [this](const QString& absFile)
+    {
+        qDebug()<<__FUNCTION__<<"fileChanged";
+        QFileInfo fi(absFile);
+        if (fi.exists())
+            emit fileChanged(toRel(absFile));
+    });
 }
 
-void FileWatcher::watchDirectory(const QString& absPath)
+void FileWatcher::addFile(const QString &absPath)
 {
-    if (m_watchedDirs.contains(absPath)) return;
+    qDebug()<<__FUNCTION__<<"absPath"<<absPath;
+    qDebug()<<m_watcher.files();
+    QFileInfo fi(absPath);
+    if (!fi.exists() || !fi.isFile())
+        return;
 
-    QDir dir(absPath);
-    if (!dir.exists()) return;
+    if (m_watchedFiles.contains(absPath))
+        return;
 
     m_watcher.addPath(absPath);
-    m_watchedDirs.insert(absPath);
+    m_watchedFiles.insert(absPath);
 
-    // 递归子目录
-    QFileInfoList entries = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
-    for (const QFileInfo& fi : entries) {
-        if (fi.isDir() && fi.fileName() != ".fvm") {
-            watchDirectory(fi.absoluteFilePath());
-        } else if (fi.isFile()) {
-            if (!m_watchedFiles.contains(fi.absoluteFilePath())) {
-                m_watcher.addPath(fi.absoluteFilePath());
-                m_watchedFiles.insert(fi.absoluteFilePath());
+    qDebug() << __FUNCTION__ << "FileWatcher re-added file:" << absPath;
+}
+
+void FileWatcher::scanAndWatchDir(const QString &absDir)
+{
+    if (m_watchedDirs.contains(absDir))
+        return;
+
+    m_watcher.addPath(absDir);
+    m_watchedDirs.insert(absDir);
+
+    snapshotDirectory(absDir);
+
+    QFileInfoList entries = QDir(absDir).entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+
+    for (const QFileInfo& fi : entries)
+    {
+        if (fi.isDir() && fi.fileName() != ".fvm")
+            scanAndWatchDir(fi.absoluteFilePath());
+        else if (fi.isFile())
+        {
+            QString absFile = fi.absoluteFilePath();
+            if (!m_watchedFiles.contains(absFile))
+            {
+                m_watcher.addPath(absFile);
+                m_watchedFiles.insert(absFile);
             }
         }
     }
+}
+
+QString FileWatcher::toRel(const QString &absPath)
+{
+    return QDir(m_workspaceRoot).relativeFilePath(absPath);
+}
+
+void FileWatcher::snapshotDirectory(const QString &dirPath)
+{
+    QDir dir(dirPath);
+    if (!dir.exists())
+        return;
+
+    QSet<QString> files;
+
+    QFileInfoList list = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    for (const QFileInfo& fi : list)
+    {
+        files.insert(fi.absoluteFilePath());
+    }
+
+    m_dirSnapshots[dirPath] = files;
 }

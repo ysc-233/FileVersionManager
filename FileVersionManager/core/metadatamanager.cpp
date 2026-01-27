@@ -158,15 +158,28 @@ bool MetadataManager::hasFile(const QString &filePath) const
     return m_versions.contains(filePath);
 }
 
-void MetadataManager::markDeleted(const QString &relPath)
+bool MetadataManager::markDeleted(const QString &relPath)
 {
-    if (!m_versions.contains(relPath))
-        return;
-    auto list = m_versions[relPath];
-    for (auto &v : list)
-        v.state = FileState::Deleted;
-    m_versions[relPath] = list;
+    auto it = m_versions.find(relPath);
+    if (it == m_versions.end() || it.value().isEmpty())
+        return false;
+
+    const VersionInfo& last = it.value().last();
+
+    // 已经是 deleted，不重复标记
+    if (last.state == FileState::Deleted)
+        return true;
+
+    VersionInfo deleted;
+    deleted.filePath  = relPath;
+    deleted.versionId = last.versionId;   // 继承最后一个版本
+    deleted.timestamp = QDateTime::currentDateTime();
+    deleted.fileSize  = last.fileSize;
+    deleted.state     = FileState::Deleted;
+
+    it.value().append(deleted);
     save();
+    return true;
 }
 
 QString MetadataManager::latestVersionHash(const QString &filePath) const
@@ -174,7 +187,6 @@ QString MetadataManager::latestVersionHash(const QString &filePath) const
     auto it = m_versions.find(filePath);
     if (it == m_versions.end())
         return QString();
-
     const auto& list = it.value();
     for (auto rit = list.rbegin(); rit != list.rend(); ++rit) {
         if (rit->state == FileState::Normal)
@@ -196,8 +208,18 @@ void MetadataManager::renameFile(const QString &oldRelPath, const QString &newRe
 
     for (auto& v : list) {
         v.filePath = newRelPath;
+        v.state = FileState::Normal;
     }
 
     m_versions.insert(newRelPath, list);
     save();
 }
+
+bool MetadataManager::isDeleted(const QString &filePath) const
+{
+    auto it = m_versions.find(filePath);
+     if (it ==m_versions.end() || it.value().isEmpty())
+         return false;
+     return it.value().last().state == FileState::Deleted;
+}
+

@@ -1,16 +1,9 @@
-2026-01-26 01:21:45 [INFO] Application started
-2026-01-26 01:21:53 [INFO] Version created: test1_2.txt [f6bbc11d]
-2026-01-26 01:21:57 [INFO] Rollback requested: file=test1_2.txt target=b3ba04d9
-2026-01-26 01:21:57 [INFO] Version exists: test1_2.txt
-2026-01-26 01:21:58 [INFO] Rollback succeeded: file=test1_2.txt target=b3ba04d9
-2026-01-26 01:22:15 [INFO] Version created: test1_133 - 副本.txt [ce6fafc3]
-2026-01-26 01:22:25 [INFO] Rollback requested: file=test1_133 - 副本.txt target=ce6fafc3
-2026-01-26 01:22:25 [INFO] Version exists: test1_133 - 副本.txt
-2026-01-26 01:22:26 [INFO] Rollback succeeded: file=test1_133 - 副本.txt target=ce6fafc3
-2026-01-26 01:22:31 [INFO] Version created: test1_133 - 副本.txt [bfb59253]
-2026-01-26 01:22:38 [INFO] Version created: test1_133 - 副本 - 副本.txt [bfb59253]
-2026-01-26 01:22:45 [INFO] Version created: test1_133 - 副本 - 副本.txt [a96ed3bb]
-2026-01-26 01:22:51 [INFO] Application exited normally
-2026-01-26 01:23:49 [INFO] Application exited normally
-2026-01-26 01:25:22 [INFO] Application started
-2026-01-26 01:25:33 [INFO] Application exited normally
+2026-01-28 01:29:43 [INFO] Application started
+2026-01-28 01:29:50 [INFO] Version created: 2 - 副本.txt [23262485]
+2026-01-28 01:29:52 [INFO] Version created: 2 - 副本.txt [88c2cbbf]
+2026-01-28 01:30:02 [INFO] File restored: 2 - 副本.txt [88c2cbbf]
+2026-01-28 01:30:47 [INFO] Application exited normally
+2026-01-28 01:33:36 [INFO] Application started
+2026-01-28 01:33:58 [INFO] Initial version created: 2 - 副本 - 副本.txt [49388ea0]
+2026-01-28 01:34:04 [INFO] Version created: 2 - 副本 - 副本.txt [3cf1bf25]
+2026-01-28 01:35:33 [INFO] Application exited normally

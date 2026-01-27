@@ -15,11 +15,11 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    // 1. 先创建 core 对象
+    // 先创建 core 对象
     m_watcher = new FileWatcher(this);
     m_versionManager = nullptr;
 
-    // 2. 创建 model / view
+    // 创建 model / view
     m_versionModel = new VersionTreeModel(this);
     m_versionView = new QTreeView(this);
     m_versionView->setModel(m_versionModel);
@@ -31,18 +31,17 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(m_versionView);
     ui->gpb_version->setLayout(layout);
 
-    // 3. 连接信号
-    setConnection();
-
-    // 4. 选择 workspace
-    QString watchPath = QFileDialog::getExistingDirectory(this, "Select Workspace");
-
-    if (watchPath.isEmpty())
+    // 选择 workspace
+    m_rootPath = QFileDialog::getExistingDirectory(this, "Select Workspace");
+    if (m_rootPath.isEmpty())
     {
         QTimer::singleShot(0, qApp, &QApplication::quit);
         return;
     }
-    setWorkspace(watchPath);
+    setWorkspace(m_rootPath);
+
+    // 连接信号
+    setConnection();
 }
 
 MainWindow::~MainWindow()
@@ -73,11 +72,8 @@ bool MainWindow::setWorkspace(const QString &path)
     m_watcher->setWorkspace(path);
 
     // 6. 刷 UI
-    m_versionModel->setAllVersions(
-        m_versionManager->allVersions());
-    m_versionModel->setCurrentVersions(
-        m_versionManager->currentVersions());
-
+    m_versionModel->setAllVersions(m_versionManager->allVersions());
+    m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
     m_versionView->expandAll();
     return true;
 }
@@ -124,31 +120,61 @@ void MainWindow::setConnection()
 {
     connect(m_watcher, &FileWatcher::fileChanged, this, [=](const QString &relPath)
     {
+        qDebug()<<__FUNCTION__<<"fileChanged"<<relPath;
         m_versionManager->onFileChanged(relPath);
         m_versionModel->setAllVersions(m_versionManager->allVersions());
         m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
         m_versionView->expandAll();
     });
-    connect(m_watcher, &FileWatcher::fileDeleted, this, [=](const QString &relPath){
-        qDebug()<<__FUNCTION__<<"Deleted";
+    connect(m_watcher, &FileWatcher::fileDeleted, this, [=](const QString &relPath)
+    {
+        qDebug()<<__FUNCTION__<<"fileDeleted"<<relPath;
         // 文件被删除，标记 Deleted，不删除版本
+        m_versionManager->onFileDeleted(relPath);
         m_versionManager->markDeleted(relPath);
+        m_versionModel->setAllVersions(m_versionManager->allVersions());
+        m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
+        m_versionView->expandAll();
+    });
+    connect(m_watcher, &FileWatcher::fileAdded,m_versionManager, [=](const QString &relPath)
+    {
+        qDebug()<<__FUNCTION__<<"fileAdded"<<relPath;
+        m_versionManager->onFileAdded(relPath);
         m_versionModel->setAllVersions(m_versionManager->allVersions());
         m_versionModel->setCurrentVersions(m_versionManager->currentVersions());
         m_versionView->expandAll();
     });
 
     connect(ui->btn_rollBack, &QPushButton::clicked,this, &MainWindow::rollBack);
+    connect(ui->btn_reStore, &QPushButton::clicked,this, [=]
+    {
+        const QModelIndex index = m_versionView->currentIndex();
+        if (!index.isValid())
+            return;
+
+        const VersionInfo target = m_versionModel->versionAt(index);
+        VersionInfo current = m_versionManager->currentVersionInfo(target.filePath);
+        if (!confirmRollbackWithDiff(current, target))
+            return;
+
+        VersionManager::RollbackError err;
+        const bool ok = m_versionManager->restoreDeletedFile(target.filePath,&err);
+    });
+    connect(m_versionManager, &VersionManager::fileRestored,this, [this](const QString& relPath)
+    {
+        QString absPath = m_rootPath + "/" + relPath;
+        m_watcher->addFile(absPath);
+    });
 
     connect(ui->btn_changeWorkspace, &QPushButton::clicked,this, [=]
     {
-        QString watchPath = QFileDialog::getExistingDirectory(this, "Select Workspace");
+        m_rootPath = QFileDialog::getExistingDirectory(this, "Select Workspace");
 
-        if (watchPath.isEmpty())
+        if (m_rootPath.isEmpty())
         {
             return;
         }
-        setWorkspace(watchPath);
+        setWorkspace(m_rootPath);
     });
 
 }

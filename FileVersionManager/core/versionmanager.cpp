@@ -114,6 +114,51 @@ void VersionManager::onFileChanged(const QString& relPath)
     Logger::info(QString("Version created: %1 [%2]").arg(relPath).arg(hash.left(8)));
 }
 
+void VersionManager::onFileDeleted(const QString &relPath)
+{
+    // 取该文件的最后一个版本 hash
+    const QString lastHash = m_metadata.latestVersionHash(relPath);
+    if (lastHash.isEmpty())
+        return;
+    m_pendingDeletes.append({relPath,lastHash,QDateTime::currentDateTime()});
+    qDebug() << __FUNCTION__ <<"Pending delete:" << relPath;
+}
+
+void VersionManager::onFileAdded(const QString &relPath)
+{
+    const QString absPath = m_rootPath + "/" + relPath;
+
+    QFile file(absPath);
+    if (!file.open(QIODevice::ReadOnly))
+        return;
+
+    QByteArray content = file.readAll();
+    file.close();
+
+    const QString hash = FileHasher::sha256(content);
+    if (hash.isEmpty())
+        return;
+
+    // 尝试匹配 pending delete
+    for (int i = 0; i < m_pendingDeletes.size(); ++i)
+    {
+        const auto& pd = m_pendingDeletes[i];
+        // hash 相同 + 时间接近 → rename
+        if (pd.lastHash == hash && pd.time.msecsTo(QDateTime::currentDateTime()) < 2000)
+        {
+            qDebug() << __FUNCTION__ <<"Rename detected:" << pd.relPath << "->" << relPath;
+
+            m_metadata.renameFile(pd.relPath, relPath);
+            m_metadata.save();
+
+            m_pendingDeletes.removeAt(i);
+            return; //不生成新版本
+        }
+    }
+    //真正的新文件
+    createInitialVersion(relPath, content);
+}
+
 bool VersionManager::rollback(const QString& filePath,const QString& versionId,RollbackError* error)
 {
     Logger::info(QString("Rollback requested: file=%1 target=%2").arg(filePath).arg(versionId.left(8)));
@@ -235,8 +280,107 @@ QString VersionManager::buildDiffText(const VersionInfo &current, const VersionI
     return text;
 }
 
+void VersionManager::flushPendingDeletes()
+{
+    const QDateTime now = QDateTime::currentDateTime();
+
+    for (int i = 0; i < m_pendingDeletes.size(); )
+    {
+        if (m_pendingDeletes[i].time.msecsTo(now) > 3000)
+        {
+            m_metadata.markDeleted(m_pendingDeletes[i].relPath);
+            qDebug() << "File deleted:" << m_pendingDeletes[i].relPath;
+            m_pendingDeletes.removeAt(i);
+        }
+        else
+        {
+            ++i;
+        }
+    }
+
+    m_metadata.save();
+}
+
+void VersionManager::createInitialVersion(const QString &relPath, const QByteArray &content)
+{
+    if (content.isEmpty())
+        return;
+
+    // 已存在版本 → 不是初始版本
+    if (!m_metadata.versions(relPath).isEmpty())
+        return;
+
+    // 计算 hash（用内容，不要再用路径）
+    const QString hash = FileHasher::sha256(content);
+    if (hash.isEmpty())
+        return;
+
+    // 保存对象内容
+    m_storage.save(hash, content);
+
+    // 构建版本信息
+    VersionInfo info;
+    info.filePath  = relPath;
+    info.versionId = hash;
+    info.timestamp = QDateTime::currentDateTime();
+    info.fileSize  = content.size();
+    info.state     = FileState::Normal;
+
+    // 写入 metadata
+    m_metadata.addVersion(info);
+    m_metadata.save();
+
+    Logger::info(QString("Initial version created: %1 [%2]").arg(relPath).arg(hash.left(8)));
+}
+
 void VersionManager::markDeleted(const QString &relPath)
 {
     m_metadata.markDeleted(relPath);
+}
+
+bool VersionManager::restoreDeletedFile(const QString &filePath, RollbackError *error)
+{
+    if (error) *error = RollbackError::None;
+
+    // 1. 找最近一个 Normal 版本
+    QString versionId = m_metadata.latestVersionHash(filePath);
+    if (versionId.isEmpty()) {
+        if (error) *error = RollbackError::VersionNotFound;
+        return false;
+    }
+
+    // 2. 从对象存储读取内容
+    QByteArray data = m_storage.load(versionId);
+    if (data.isEmpty()) {
+        if (error) *error = RollbackError::LoadFailed;
+        return false;
+    }
+
+    // 3. 写回磁盘
+    QString absPath = m_rootPath + "/" + filePath;
+    QDir().mkpath(QFileInfo(absPath).absolutePath());
+
+    QFile file(absPath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        if (error) *error = RollbackError::WriteFailed;
+        return false;
+    }
+    file.write(data);
+    file.close();
+
+    // 4. 追加一条 Normal 记录（关键）
+    VersionInfo restored;
+    restored.filePath  = filePath;
+    restored.versionId = versionId;
+    restored.timestamp = QDateTime::currentDateTime();
+    restored.fileSize  = data.size();
+    restored.state     = FileState::Normal;
+
+    m_metadata.addVersion(restored);
+    m_metadata.save();
+
+    Logger::info(QString("File restored: %1 [%2]").arg(filePath).arg(versionId.left(8)));
+    emit fileRestored(filePath);
+    return true;
 }
 
