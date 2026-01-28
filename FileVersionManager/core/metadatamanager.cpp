@@ -205,12 +205,11 @@ void MetadataManager::renameFile(const QString &oldRelPath, const QString &newRe
         return; // 防御：避免覆盖已有记录
 
     auto list = m_versions.take(oldRelPath);
-
-    for (auto& v : list) {
+    list.removeLast();// 去除最后一个删除标记
+    for (auto& v : list)
+    {
         v.filePath = newRelPath;
-        v.state = FileState::Normal;
     }
-
     m_versions.insert(newRelPath, list);
     save();
 }

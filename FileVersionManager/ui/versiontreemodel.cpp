@@ -15,22 +15,14 @@ void VersionTreeModel::setAllVersions(const QMap<QString, QList<VersionInfo>>& d
     for (auto it = data.begin(); it != data.end(); ++it) {
         FileNode file;
         file.m_filePath = it.key();
-
-        for (const VersionInfo& info : it.value()) {
-            VersionNode node;
-            node.m_versionId = info.versionId;
-            node.m_time = info.timestamp;
-            node.m_fileSize = info.fileSize;
-            file.m_versions.push_back(node);
-        }
-        m_files.push_back(file);
+        file.m_versions = buildDisplayVersions(it.value());
+        if (!file.m_versions.isEmpty())
+            m_files.push_back(file);
     }
-
     endResetModel();
 }
 
-QModelIndex VersionTreeModel::index(int row, int column,
-                                    const QModelIndex& parent) const
+QModelIndex VersionTreeModel::index(int row, int column,const QModelIndex& parent) const
 {
     if (column != 0 || row < 0)
         return QModelIndex();
@@ -131,18 +123,15 @@ QVariant VersionTreeModel::data(const QModelIndex& index, int role) const
     {
         if (role == Qt::DisplayRole)
         {
-            const FileNode* file =
-                static_cast<const FileNode*>(index.internalPointer());
+            const FileNode* file = static_cast<const FileNode*>(index.internalPointer());
             return QFileInfo(file->m_filePath).fileName();
         }
         return {};
     }
 
     // ---------- 版本节点 ----------
-    const VersionNode* v =
-        static_cast<const VersionNode*>(index.internalPointer());
-    const FileNode* f =
-        static_cast<const FileNode*>(index.parent().internalPointer());
+    const VersionNode* v = static_cast<const VersionNode*>(index.internalPointer());
+    const FileNode* f = static_cast<const FileNode*>(index.parent().internalPointer());
 
     if (!v || !f)
         return {};
@@ -153,9 +142,14 @@ QVariant VersionTreeModel::data(const QModelIndex& index, int role) const
             .arg(v->m_versionId.left(8))
             .arg(v->m_time.toString("yyyy-MM-dd HH:mm:ss"));
     }
+    // Deleted → 红色
+   if (role == Qt::ForegroundRole) {
+       if (v->m_state == FileState::Deleted) {
+           return QBrush(QColor(200, 60, 60)); // 暗红色
+       }
+   }
 
-    const QString current =
-        m_currentVersions.value(f->m_filePath);
+    const QString current = m_currentVersions.value(f->m_filePath);
 
     if (!current.isEmpty() && current == v->m_versionId)
     {
@@ -174,6 +168,68 @@ QVariant VersionTreeModel::data(const QModelIndex& index, int role) const
     return {};
 }
 
+QVector<VersionNode> VersionTreeModel::buildDisplayVersions(const QList<VersionInfo>& versions) const
+{
+    QVector<VersionNode> result;
+    if (versions.isEmpty())
+        return result;
+
+    // ---------- 判断文件最终状态 ----------
+    const VersionInfo& last = versions.last();
+    const bool fileDeleted = (last.state == FileState::Deleted);
+
+    // ---------- 按 versionId 取最后一次事件 ----------
+    QMap<QString, const VersionInfo*> latestByVersion;
+
+    for (const auto& v : versions) {
+        auto it = latestByVersion.find(v.versionId);
+        if (it == latestByVersion.end() || v.timestamp > it.value()->timestamp) {
+            latestByVersion[v.versionId] = &v;
+        }
+    }
+
+    // ---------- 构建显示列表 ----------
+    for (auto it = latestByVersion.begin(); it != latestByVersion.end(); ++it) {
+        const VersionInfo* v = it.value();
+
+        // 关键过滤逻辑
+        if (!fileDeleted && v->state == FileState::Deleted) {
+            // 文件已恢复 → 不显示任何 Deleted
+            continue;
+        }
+
+        if (fileDeleted && v->state == FileState::Deleted) {
+            // 文件已删除 → 只保留最后一个 Deleted
+            // （下面会通过时间排序 + 去重自然保证）
+        }
+
+        VersionNode node;
+        node.m_versionId = v->versionId;
+        node.m_time      = v->timestamp;
+        node.m_fileSize  = v->fileSize;
+        node.m_state     = v->state;
+
+        result.push_back(node);
+    }
+
+    // ---------- 时间排序 ----------
+    std::sort(result.begin(), result.end(),
+              [](const VersionNode& a, const VersionNode& b) {
+                  return a.m_time < b.m_time;
+              });
+
+    // ---------- 如果文件已删除，只保留最后一个 Deleted ----------
+    if (fileDeleted) {
+        for (int i = result.size() - 1; i >= 0; --i) {
+            if (result[i].m_state == FileState::Deleted) {
+                result = { result[i] };
+                break;
+            }
+        }
+    }
+
+    return result;
+}
 
 VersionInfo VersionTreeModel::versionAt(const QModelIndex& index) const
 {
@@ -207,12 +263,9 @@ void VersionTreeModel::setCurrentVersions(const QMap<QString, QString> &current)
     if (!topLeft.isValid())
         return;
 
-    QModelIndex bottomRight =
-        index(m_files.size() - 1, 0, QModelIndex());
+    QModelIndex bottomRight = index(m_files.size() - 1, 0, QModelIndex());
 
-    emit dataChanged(
-        topLeft,
-        bottomRight,
+    emit dataChanged(topLeft,bottomRight,
         { Qt::DisplayRole, Qt::FontRole, Qt::ForegroundRole }
     );
 }

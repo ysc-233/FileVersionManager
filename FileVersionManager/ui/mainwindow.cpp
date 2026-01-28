@@ -160,11 +160,6 @@ void MainWindow::setConnection()
         VersionManager::RollbackError err;
         const bool ok = m_versionManager->restoreDeletedFile(target.filePath,&err);
     });
-    connect(m_versionManager, &VersionManager::fileRestored,this, [this](const QString& relPath)
-    {
-        QString absPath = m_rootPath + "/" + relPath;
-        m_watcher->addFile(absPath);
-    });
 
     connect(ui->btn_changeWorkspace, &QPushButton::clicked,this, [=]
     {

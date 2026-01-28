@@ -149,8 +149,6 @@ void VersionManager::onFileAdded(const QString &relPath)
             qDebug() << __FUNCTION__ <<"Rename detected:" << pd.relPath << "->" << relPath;
 
             m_metadata.renameFile(pd.relPath, relPath);
-            m_metadata.save();
-
             m_pendingDeletes.removeAt(i);
             return; //不生成新版本
         }
