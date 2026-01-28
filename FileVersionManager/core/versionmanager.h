@@ -19,12 +19,12 @@ public:
         WriteFailed,
         RenameFailed
     };
-    struct PendingDelete {
+    struct PendingDelete
+    {
         QString relPath;
-        QString hash;
+        QString lastHash;
         QDateTime time;
     };
-
     explicit VersionManager(const QString& rootPath, QObject* parent = nullptr);
     void initializeWorkspace();
     QList<VersionInfo> versions(const QString& filePath) const;
@@ -34,14 +34,21 @@ public:
     VersionInfo currentVersionInfo(const QString& filePath) const;
     static QString buildDiffText(const VersionInfo& current,const VersionInfo& target);
     void markDeleted(const QString &relPath);
+    bool restoreDeletedFile(const QString& filePath,RollbackError* error);
+signals:
+    void fileRestored(const QString& relPath);
 public slots:
     void onFileChanged(const QString& absPath);
-
+    void onFileDeleted(const QString& relPath);
+    void onFileAdded(const QString& relPath);
+private:
+    void flushPendingDeletes();
+    void createInitialVersion(const QString& relPath,const QByteArray& content);
 private:
     QString m_rootPath;
     MetadataManager m_metadata;
     FileStorage m_storage;
-    QList<PendingDelete> m_recentDeletes;
+    QList<PendingDelete> m_pendingDeletes;
 };
 
 #endif // m_versionManagerH

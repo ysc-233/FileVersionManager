@@ -20,10 +20,10 @@ public:
     QList<VersionInfo> versions(const QString& filePath) const;
     QMap<QString, QList<VersionInfo>> allVersions() const { return m_versions; }
     bool hasFile(const QString& filePath) const;
-    void markDeleted(const QString& filePath);
+    bool markDeleted(const QString& filePath);
     QString latestVersionHash(const QString& filePath) const;
     void renameFile(const QString& oldRelPath,const QString& newRelPath);
-
+    bool isDeleted(const QString& filePath) const;
 private:
     QString m_rootPath;
     QString m_metadataFile;

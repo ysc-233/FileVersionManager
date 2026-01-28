@@ -35,5 +35,6 @@ private:
     VersionManager* m_versionManager;
     VersionTreeModel* m_versionModel;
     QTreeView* m_versionView;
+    QString m_rootPath;
 };
 #endif // MAINWINDOW_H

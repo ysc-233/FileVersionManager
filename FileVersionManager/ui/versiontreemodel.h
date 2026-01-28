@@ -9,6 +9,7 @@ struct VersionNode {
     QString m_versionId;
     QDateTime m_time;
     qint64 m_fileSize;
+    FileState m_state = FileState::Normal;
     bool operator==(const VersionNode& other) const
     {
         return m_versionId == other.m_versionId;
@@ -35,7 +36,8 @@ public:
     int rowCount(const QModelIndex& parent) const override;
     int columnCount(const QModelIndex&) const override;
     QVariant data(const QModelIndex& index, int role) const override;
-
+private:
+    QVector<VersionNode> buildDisplayVersions(const QList<VersionInfo>& versions) const;
 private:
     QVector<FileNode> m_files;
     QMap<QString, QString> m_currentVersions; // filePath → versionId

@@ -1,16 +1,20 @@
-2026-01-26 01:21:45 [INFO] Application started
-2026-01-26 01:21:53 [INFO] Version created: test1_2.txt [f6bbc11d]
-2026-01-26 01:21:57 [INFO] Rollback requested: file=test1_2.txt target=b3ba04d9
-2026-01-26 01:21:57 [INFO] Version exists: test1_2.txt
-2026-01-26 01:21:58 [INFO] Rollback succeeded: file=test1_2.txt target=b3ba04d9
-2026-01-26 01:22:15 [INFO] Version created: test1_133 - 副本.txt [ce6fafc3]
-2026-01-26 01:22:25 [INFO] Rollback requested: file=test1_133 - 副本.txt target=ce6fafc3
-2026-01-26 01:22:25 [INFO] Version exists: test1_133 - 副本.txt
-2026-01-26 01:22:26 [INFO] Rollback succeeded: file=test1_133 - 副本.txt target=ce6fafc3
-2026-01-26 01:22:31 [INFO] Version created: test1_133 - 副本.txt [bfb59253]
-2026-01-26 01:22:38 [INFO] Version created: test1_133 - 副本 - 副本.txt [bfb59253]
-2026-01-26 01:22:45 [INFO] Version created: test1_133 - 副本 - 副本.txt [a96ed3bb]
-2026-01-26 01:22:51 [INFO] Application exited normally
-2026-01-26 01:23:49 [INFO] Application exited normally
-2026-01-26 01:25:22 [INFO] Application started
-2026-01-26 01:25:33 [INFO] Application exited normally
+2026-01-28 23:41:51 [INFO] Application started
+2026-01-28 23:41:57 [INFO] Version created: 1.txt [07217724]
+2026-01-28 23:41:59 [INFO] Version created: 1.txt [a16133f5]
+2026-01-28 23:42:02 [INFO] Version created: 1.txt [2395a94d]
+2026-01-28 23:42:39 [INFO] Rollback requested: file=1.txt target=2395a94d
+2026-01-28 23:42:40 [INFO] Rollback succeeded: file=1.txt target=2395a94d
+2026-01-28 23:43:06 [INFO] Version created: 1.txt [faefdfcc]
+2026-01-28 23:43:34 [INFO] Application exited normally
+2026-01-28 23:48:08 [INFO] Application started
+2026-01-28 23:48:48 [INFO] Application exited normally
+2026-01-29 00:00:12 [INFO] Application started
+2026-01-29 00:00:23 [INFO] Application exited normally
+2026-01-29 00:03:05 [INFO] Application started
+2026-01-29 00:03:45 [INFO] Application exited normally
+2026-01-29 00:06:00 [INFO] Application started
+2026-01-29 00:06:05 [INFO] File restored: 2.txt [a37f75c7]
+2026-01-29 00:06:18 [INFO] Version created: 2.txt [82273d54]
+2026-01-29 00:06:32 [INFO] Initial version created: 222 - 副本.txt [82273d54]
+2026-01-29 00:06:38 [INFO] File restored: 222 - 副本.txt [82273d54]
+2026-01-29 00:06:50 [INFO] Application exited normally
